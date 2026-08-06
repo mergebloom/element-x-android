@@ -85,6 +85,7 @@ import io.element.android.libraries.textcomposer.mentions.ResolvedSuggestion
 import io.element.android.libraries.textcomposer.model.MarkdownTextEditorState
 import io.element.android.libraries.textcomposer.model.Message
 import io.element.android.libraries.textcomposer.model.MessageComposerMode
+import io.element.android.libraries.textcomposer.model.ReasoningEffort
 import io.element.android.libraries.textcomposer.model.Suggestion
 import io.element.android.libraries.textcomposer.model.TextEditorState
 import io.element.android.libraries.textcomposer.model.rememberMarkdownTextEditorState
@@ -279,6 +280,7 @@ class MessageComposerPresenter(
                         markdownTextEditorState = markdownTextEditorState,
                         richTextEditorState = richTextEditorState,
                         slashCommandAction = slashCommandAction,
+                        reasoningEffort = event.reasoningEffort,
                     )
                 }
                 is MessageComposerEvent.SendUri -> {
@@ -482,6 +484,7 @@ class MessageComposerPresenter(
         markdownTextEditorState: MarkdownTextEditorState,
         richTextEditorState: RichTextEditorState,
         slashCommandAction: MutableState<AsyncAction<Unit>>,
+        reasoningEffort: ReasoningEffort?,
     ) = launch {
         val message = currentComposerMessage(markdownTextEditorState, richTextEditorState, withMentions = true)
         val capturedMode = messageComposerContext.composerMode
@@ -551,7 +554,7 @@ class MessageComposerPresenter(
             is MessageComposerMode.Normal -> timelineController.invokeOnCurrentTimeline {
                 sendMessage(
                     body = message.markdown,
-                    htmlBody = message.html,
+                    htmlBody = reasoningFormattedBody(message.markdown, message.html, reasoningEffort),
                     intentionalMentions = message.intentionalMentions
                 )
             }
@@ -582,7 +585,7 @@ class MessageComposerPresenter(
                     with(capturedMode) {
                         replyMessage(
                             body = message.markdown,
-                            htmlBody = message.html,
+                            htmlBody = reasoningFormattedBody(message.markdown, message.html, reasoningEffort),
                             intentionalMentions = message.intentionalMentions,
                             repliedToEventId = eventId,
                         )
