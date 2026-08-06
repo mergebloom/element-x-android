@@ -11,11 +11,12 @@ package io.element.android.features.messages.impl.messagecomposer
 import android.net.Uri
 import io.element.android.libraries.textcomposer.mentions.ResolvedSuggestion
 import io.element.android.libraries.textcomposer.model.MessageComposerMode
+import io.element.android.libraries.textcomposer.model.ReasoningEffort
 import io.element.android.libraries.textcomposer.model.Suggestion
 
 sealed interface MessageComposerEvent {
     data object ToggleFullScreenState : MessageComposerEvent
-    data object SendMessage : MessageComposerEvent
+    data class SendMessage(val reasoningEffort: ReasoningEffort? = null) : MessageComposerEvent
     data class SendUri(val uri: Uri) : MessageComposerEvent
     data object CloseSpecialMode : MessageComposerEvent
     data class SetMode(val composerMode: MessageComposerMode) : MessageComposerEvent

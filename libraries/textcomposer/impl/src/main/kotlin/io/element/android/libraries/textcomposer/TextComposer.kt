@@ -13,6 +13,7 @@ import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,6 +29,7 @@ import androidx.compose.foundation.layout.requiredHeightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -40,21 +42,28 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import io.element.android.compound.theme.ElementTheme
 import io.element.android.compound.tokens.generated.CompoundIcons
 import io.element.android.libraries.androidutils.ui.showKeyboard
@@ -89,6 +98,7 @@ import io.element.android.libraries.textcomposer.components.VoiceMessageRecordin
 import io.element.android.libraries.textcomposer.components.markdown.MarkdownTextInput
 import io.element.android.libraries.textcomposer.components.textInputRoundedCornerShape
 import io.element.android.libraries.textcomposer.model.MessageComposerMode
+import io.element.android.libraries.textcomposer.model.ReasoningEffort
 import io.element.android.libraries.textcomposer.model.Suggestion
 import io.element.android.libraries.textcomposer.model.TextEditorState
 import io.element.android.libraries.textcomposer.model.VoiceMessagePlayerEvent
@@ -116,6 +126,8 @@ fun TextComposer(
     composerMode: MessageComposerMode,
     onRequestFocus: () -> Unit,
     onSendMessage: () -> Unit,
+    onSendMessageWithReasoning: (ReasoningEffort) -> Unit = { onSendMessage() },
+    reasoningSwipeEnabled: Boolean = false,
     onResetComposerMode: () -> Unit,
     onAddAttachment: () -> Unit,
     onDismissTextFormatting: () -> Unit,
@@ -317,6 +329,7 @@ fun TextComposer(
                         isEditing = false,
                     )
                 },
+                onSendMessageWithReasoning = if (reasoningSwipeEnabled) onSendMessageWithReasoning else null,
             )
         }
     }
@@ -352,6 +365,7 @@ fun TextComposer(
                         isEditing = false,
                     )
                 },
+                onSendMessageWithReasoning = if (reasoningSwipeEnabled && canSendTextMessage) onSendMessageWithReasoning else null,
             )
         }
     }
@@ -445,6 +459,7 @@ private data class EndButtonParams(
     val endButtonContentDescriptionResId: Int,
     val endButtonClick: () -> Unit,
     val endButtonContent: @Composable () -> Unit,
+    val onSendMessageWithReasoning: ((ReasoningEffort) -> Unit)? = null,
 )
 
 @Composable
@@ -540,17 +555,7 @@ private fun StandardLayout(
             }
             // To avoid loosing keyboard focus, the IconButton has to be defined here and has to be always enabled.
             val endButtonContentDescription = stringResource(endButtonParams.endButtonContentDescriptionResId)
-            IconButton(
-                modifier = Modifier
-                    .padding(bottom = 5.dp, top = 5.dp, end = 6.dp, start = 6.dp)
-                    .size(48.dp)
-                    .clearAndSetSemantics {
-                        contentDescription = endButtonContentDescription
-                        onClick(null, null)
-                    },
-                onClick = endButtonParams.endButtonClick,
-                content = endButtonParams.endButtonContent,
-            )
+            ReasoningEndButton(endButtonParams, endButtonContentDescription)
         }
     }
 }
@@ -616,21 +621,117 @@ private fun TextFormattingLayout(
             }
             // To avoid loosing keyboard focus, the IconButton has to be defined here and has to be always enabled.
             val endButtonContentDescription = stringResource(endButtonParams.endButtonContentDescriptionResId)
-            IconButton(
-                modifier = Modifier
-                    .padding(
-                        start = 14.dp,
-                        end = 6.dp,
-                    )
-                    .size(48.dp)
-                    .clearAndSetSemantics {
-                        contentDescription = endButtonContentDescription
-                        onClick(null, null)
-                    },
-                onClick = endButtonParams.endButtonClick,
-                content = endButtonParams.endButtonContent,
-            )
+            ReasoningEndButton(endButtonParams, endButtonContentDescription, startPadding = 14.dp)
         }
+    }
+}
+
+@Composable
+private fun ReasoningEndButton(
+    params: EndButtonParams,
+    contentDescription: String,
+    startPadding: androidx.compose.ui.unit.Dp = 6.dp,
+) {
+    val itemHeight = 48.dp
+    val itemHeightPx = with(LocalDensity.current) { itemHeight.toPx() }
+    val haptics = LocalHapticFeedback.current
+    var dragging by remember { mutableStateOf(false) }
+    var dragOffset by remember { mutableStateOf(Offset.Zero) }
+    var selected by remember { mutableStateOf<ReasoningEffort?>(null) }
+    val labels = listOf(
+        stringResource(R.string.rich_text_editor_reasoning_low),
+        stringResource(R.string.rich_text_editor_reasoning_medium),
+        stringResource(R.string.rich_text_editor_reasoning_high),
+        stringResource(R.string.rich_text_editor_reasoning_max),
+    )
+    val actions = params.onSendMessageWithReasoning?.let { send ->
+        ReasoningEffort.entries.mapIndexed { index, effort ->
+            CustomAccessibilityAction(labels[index]) {
+                send(effort)
+                true
+            }
+        }
+    }.orEmpty()
+    Box {
+        if (dragging) {
+            Popup(
+                alignment = Alignment.BottomEnd,
+                offset = IntOffset(0, with(LocalDensity.current) { (-56).dp.roundToPx() }),
+                properties = PopupProperties(focusable = false),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(ElementTheme.colors.bgSubtleSecondary)
+                        .border(1.dp, ElementTheme.colors.borderDisabled, RoundedCornerShape(16.dp))
+                        .padding(4.dp),
+                ) {
+                    ReasoningEffort.entries.reversed().forEach { effort ->
+                        val index = ReasoningEffort.entries.indexOf(effort)
+                        Text(
+                            text = labels[index],
+                            modifier = Modifier
+                                .height(itemHeight)
+                                .background(
+                                    if (selected == effort) ElementTheme.colors.bgActionPrimaryRest else ElementTheme.colors.bgSubtleSecondary,
+                                    RoundedCornerShape(12.dp),
+                                )
+                                .padding(horizontal = 20.dp, vertical = 13.dp),
+                            style = ElementTheme.typography.fontBodyMdRegular,
+                            color = if (selected == effort) ElementTheme.colors.textOnSolidPrimary else ElementTheme.colors.textPrimary,
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.rich_text_editor_reasoning_cancel),
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 13.dp),
+                        style = ElementTheme.typography.fontBodyMdRegular,
+                        color = ElementTheme.colors.textSecondary,
+                    )
+                }
+            }
+        }
+        IconButton(
+            modifier = Modifier
+                .padding(bottom = 5.dp, top = 5.dp, end = 6.dp, start = startPadding)
+                .size(48.dp)
+                .then(
+                    if (params.onSendMessageWithReasoning == null) Modifier else Modifier.pointerInput(params.onSendMessageWithReasoning) {
+                        detectDragGestures(
+                            onDragStart = {
+                                dragging = true
+                                dragOffset = Offset.Zero
+                                selected = null
+                            },
+                            onDrag = { change, amount ->
+                                change.consume()
+                                dragOffset += amount
+                                val newSelection = reasoningEffortForDrag(-dragOffset.y, dragOffset.x, itemHeightPx)
+                                if (newSelection != selected) {
+                                    selected = newSelection
+                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                }
+                            },
+                            onDragCancel = {
+                                dragging = false
+                                selected = null
+                            },
+                            onDragEnd = {
+                                val effort = selected
+                                dragging = false
+                                selected = null
+                                if (effort != null) params.onSendMessageWithReasoning.invoke(effort)
+                            },
+                        )
+                    }
+                )
+                .clearAndSetSemantics {
+                    this.contentDescription = contentDescription
+                    onClick(null, null)
+                    customActions = actions
+                },
+            onClick = params.endButtonClick,
+            content = params.endButtonContent,
+        )
     }
 }
 

@@ -27,6 +27,7 @@ import io.element.android.libraries.designsystem.preview.ElementPreview
 import io.element.android.libraries.designsystem.preview.PreviewsDayNight
 import io.element.android.libraries.textcomposer.TextComposer
 import io.element.android.libraries.textcomposer.model.Suggestion
+import io.element.android.libraries.textcomposer.model.ReasoningEffort
 import io.element.android.libraries.textcomposer.model.VoiceMessagePlayerEvent
 import io.element.android.libraries.textcomposer.model.VoiceMessageRecorderEvent
 import kotlinx.coroutines.launch
@@ -38,8 +39,8 @@ internal fun MessageComposerView(
     modifier: Modifier = Modifier,
 ) {
     val view = LocalView.current
-    fun sendMessage() {
-        state.eventSink(MessageComposerEvent.SendMessage)
+    fun sendMessage(reasoningEffort: ReasoningEffort? = null) {
+        state.eventSink(MessageComposerEvent.SendMessage(reasoningEffort))
     }
 
     fun sendUri(uri: Uri) {
@@ -100,7 +101,9 @@ internal fun MessageComposerView(
         state = state.textEditorState,
         voiceMessageState = voiceMessageState.voiceMessageState,
         onRequestFocus = ::onRequestFocus,
-        onSendMessage = ::sendMessage,
+        onSendMessage = { sendMessage() },
+        onSendMessageWithReasoning = { sendMessage(it) },
+        reasoningSwipeEnabled = !state.mode.isEditing,
         composerMode = state.mode,
         showTextFormatting = state.showTextFormatting,
         onResetComposerMode = ::onCloseSpecialMode,
