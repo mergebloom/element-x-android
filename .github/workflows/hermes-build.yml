@@ -1,0 +1,37 @@
+name: Hermes APK Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ develop ]
+
+permissions:
+  contents: read
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx8g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -XX:+UseG1GC -Dkotlin.daemon.jvm.options=-Xmx4g
+  CI_GRADLE_ARG_PROPERTIES: --stacktrace -Dsonar.gradle.skipCompile=true --no-configuration-cache
+
+jobs:
+  build:
+    name: Test and build universal debug APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Use JDK 21
+        uses: actions/setup-java@03ad4de0992f9d1fd24920ca5ca8a6dc050629c5 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Configure Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+      - name: Run reasoning tests
+        run: ./gradlew :libraries:textcomposer:impl:testDebugUnitTest :features:messages:impl:testDebugUnitTest --tests '*Reasoning*' $CI_GRADLE_ARG_PROPERTIES
+      - name: Build universal debug APK
+        run: ./gradlew :app:assembleGplayDebug $CI_GRADLE_ARG_PROPERTIES
+      - name: Upload universal APK
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: elementx-hermes-universal-debug
+          path: app/build/outputs/apk/gplay/debug/*-universal-debug.apk
+          if-no-files-found: error
