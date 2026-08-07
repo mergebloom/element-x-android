@@ -10,6 +10,7 @@ package io.element.android.libraries.textcomposer
 
 import android.content.res.Configuration
 import android.net.Uri
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,7 +25,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeightIn
 import androidx.compose.foundation.layout.size
@@ -45,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -662,36 +663,66 @@ private fun ReasoningEndButton(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(width = 240.dp, height = 176.dp)
-                        .clip(RoundedCornerShape(28.dp))
-                        .background(ElementTheme.colors.bgSubtleSecondary)
-                        .border(1.dp, ElementTheme.colors.borderDisabled, RoundedCornerShape(28.dp))
-                        .padding(8.dp),
+                        .size(width = 288.dp, height = 176.dp),
                 ) {
+                    val restingColor = ElementTheme.colors.bgSubtleSecondary
+                    val selectedColor = ElementTheme.colors.bgActionPrimaryRest
+                    val dividerColor = ElementTheme.colors.borderDisabled
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val radius = size.width / 2f
+                        val center = Offset(size.width / 2f, size.height - 8.dp.toPx())
+                        val topLeft = Offset(center.x - radius, center.y - radius)
+                        val arcSize = androidx.compose.ui.geometry.Size(radius * 2f, radius * 2f)
+
+                        ReasoningEffort.entries.forEachIndexed { index, effort ->
+                            drawArc(
+                                color = if (selected == effort) selectedColor else restingColor,
+                                startAngle = 180f + index * 45f,
+                                sweepAngle = 45f,
+                                useCenter = true,
+                                topLeft = topLeft,
+                                size = arcSize,
+                            )
+                            drawArc(
+                                color = dividerColor,
+                                startAngle = 180f + index * 45f,
+                                sweepAngle = 45f,
+                                useCenter = true,
+                                topLeft = topLeft,
+                                size = arcSize,
+                                style = Stroke(width = 1.dp.toPx()),
+                            )
+                        }
+                        drawCircle(
+                            color = restingColor,
+                            radius = 45.dp.toPx(),
+                            center = center,
+                        )
+                        drawCircle(
+                            color = dividerColor,
+                            radius = 45.dp.toPx(),
+                            center = center,
+                            style = Stroke(width = 1.dp.toPx()),
+                        )
+                    }
                     ReasoningEffort.entries.forEach { effort ->
                         val index = ReasoningEffort.entries.indexOf(effort)
                         val alignment = when (effort) {
                             ReasoningEffort.Low -> Alignment.BottomStart
-                            ReasoningEffort.Medium -> Alignment.CenterStart
-                            ReasoningEffort.High -> Alignment.TopCenter
-                            ReasoningEffort.Max -> Alignment.TopEnd
-                        }
-                        val position = when (effort) {
-                            ReasoningEffort.Low -> Modifier.offset(x = 0.dp, y = (-2).dp)
-                            ReasoningEffort.Medium -> Modifier.offset(x = 16.dp, y = (-8).dp)
-                            ReasoningEffort.High -> Modifier.offset(x = 4.dp, y = 20.dp)
-                            ReasoningEffort.Max -> Modifier.offset(x = 0.dp, y = 36.dp)
+                            ReasoningEffort.Medium -> Alignment.TopStart
+                            ReasoningEffort.High -> Alignment.TopEnd
+                            ReasoningEffort.Max -> Alignment.BottomEnd
                         }
                         Text(
                             text = labels[index],
                             modifier = Modifier
                                 .align(alignment)
-                                .then(position)
-                                .background(
-                                    if (selected == effort) ElementTheme.colors.bgActionPrimaryRest else ElementTheme.colors.bgSubtleSecondary,
-                                    RoundedCornerShape(18.dp),
-                                )
-                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                                .padding(
+                                    start = if (effort == ReasoningEffort.Low) 20.dp else 48.dp,
+                                    end = if (effort == ReasoningEffort.Max) 20.dp else 48.dp,
+                                    top = if (effort == ReasoningEffort.Medium || effort == ReasoningEffort.High) 48.dp else 0.dp,
+                                    bottom = if (effort == ReasoningEffort.Low || effort == ReasoningEffort.Max) 40.dp else 0.dp,
+                                ),
                             style = ElementTheme.typography.fontBodyMdRegular,
                             color = if (selected == effort) ElementTheme.colors.textOnSolidPrimary else ElementTheme.colors.textPrimary,
                         )
@@ -699,8 +730,8 @@ private fun ReasoningEndButton(
                     Text(
                         text = stringResource(R.string.rich_text_editor_reasoning_cancel),
                         modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 22.dp),
                         style = ElementTheme.typography.fontBodySmRegular,
                         color = ElementTheme.colors.textSecondary,
                     )
