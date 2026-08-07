@@ -39,8 +39,12 @@ internal fun MessageComposerView(
     modifier: Modifier = Modifier,
 ) {
     val view = LocalView.current
-    fun sendMessage(reasoningEffort: ReasoningEffort? = null) {
-        state.eventSink(MessageComposerEvent.SendMessage(reasoningEffort))
+    fun sendMessage() {
+        state.eventSink(MessageComposerEvent.SendMessage)
+    }
+
+    fun sendMessageWithReasoning(reasoningEffort: ReasoningEffort) {
+        state.eventSink(MessageComposerEvent.SendMessageWithReasoning(reasoningEffort))
     }
 
     fun sendUri(uri: Uri) {
@@ -101,8 +105,8 @@ internal fun MessageComposerView(
         state = state.textEditorState,
         voiceMessageState = voiceMessageState.voiceMessageState,
         onRequestFocus = ::onRequestFocus,
-        onSendMessage = { sendMessage() },
-        onSendMessageWithReasoning = { sendMessage(it) },
+        onSendMessage = ::sendMessage,
+        onSendMessageWithReasoning = ::sendMessageWithReasoning,
         reasoningSwipeEnabled = !state.mode.isEditing,
         composerMode = state.mode,
         showTextFormatting = state.showTextFormatting,

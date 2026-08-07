@@ -16,7 +16,8 @@ import io.element.android.libraries.textcomposer.model.Suggestion
 
 sealed interface MessageComposerEvent {
     data object ToggleFullScreenState : MessageComposerEvent
-    data class SendMessage(val reasoningEffort: ReasoningEffort? = null) : MessageComposerEvent
+    data object SendMessage : MessageComposerEvent
+    data class SendMessageWithReasoning(val reasoningEffort: ReasoningEffort) : MessageComposerEvent
     data class SendUri(val uri: Uri) : MessageComposerEvent
     data object CloseSpecialMode : MessageComposerEvent
     data class SetMode(val composerMode: MessageComposerMode) : MessageComposerEvent

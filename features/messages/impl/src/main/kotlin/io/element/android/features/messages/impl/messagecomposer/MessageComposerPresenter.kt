@@ -275,7 +275,15 @@ class MessageComposerPresenter(
                         messageComposerContext.composerMode = MessageComposerMode.Normal
                     }
                 }
-                is MessageComposerEvent.SendMessage -> {
+                MessageComposerEvent.SendMessage -> {
+                    sessionCoroutineScope.sendMessage(
+                        markdownTextEditorState = markdownTextEditorState,
+                        richTextEditorState = richTextEditorState,
+                        slashCommandAction = slashCommandAction,
+                        reasoningEffort = null,
+                    )
+                }
+                is MessageComposerEvent.SendMessageWithReasoning -> {
                     sessionCoroutineScope.sendMessage(
                         markdownTextEditorState = markdownTextEditorState,
                         richTextEditorState = richTextEditorState,
