@@ -8,8 +8,8 @@
 package io.element.android.features.messages.impl.messagecomposer
 
 import io.element.android.libraries.textcomposer.model.ReasoningEffort
+import org.junit.Assert.assertEquals
 import org.junit.Test
-import kotlin.test.assertEquals
 
 class ReasoningMessageFormattingTest {
     @Test
