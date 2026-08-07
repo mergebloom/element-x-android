@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeightIn
 import androidx.compose.foundation.layout.size
@@ -632,8 +633,8 @@ private fun ReasoningEndButton(
     contentDescription: String,
     startPadding: androidx.compose.ui.unit.Dp = 6.dp,
 ) {
-    val itemHeight = 48.dp
-    val itemHeightPx = with(LocalDensity.current) { itemHeight.toPx() }
+    val activationThreshold = 24.dp
+    val activationThresholdPx = with(LocalDensity.current) { activationThreshold.toPx() }
     val haptics = LocalHapticFeedback.current
     var dragging by remember { mutableStateOf(false) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
@@ -659,32 +660,48 @@ private fun ReasoningEndButton(
                 offset = IntOffset(0, with(LocalDensity.current) { (-56).dp.roundToPx() }),
                 properties = PopupProperties(focusable = false),
             ) {
-                Column(
+                Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(16.dp))
+                        .size(width = 240.dp, height = 176.dp)
+                        .clip(RoundedCornerShape(28.dp))
                         .background(ElementTheme.colors.bgSubtleSecondary)
-                        .border(1.dp, ElementTheme.colors.borderDisabled, RoundedCornerShape(16.dp))
-                        .padding(4.dp),
+                        .border(1.dp, ElementTheme.colors.borderDisabled, RoundedCornerShape(28.dp))
+                        .padding(8.dp),
                 ) {
-                    ReasoningEffort.entries.reversed().forEach { effort ->
+                    ReasoningEffort.entries.forEach { effort ->
                         val index = ReasoningEffort.entries.indexOf(effort)
+                        val alignment = when (effort) {
+                            ReasoningEffort.Low -> Alignment.BottomStart
+                            ReasoningEffort.Medium -> Alignment.CenterStart
+                            ReasoningEffort.High -> Alignment.TopCenter
+                            ReasoningEffort.Max -> Alignment.TopEnd
+                        }
+                        val position = when (effort) {
+                            ReasoningEffort.Low -> Modifier.offset(x = 0.dp, y = (-2).dp)
+                            ReasoningEffort.Medium -> Modifier.offset(x = 16.dp, y = (-8).dp)
+                            ReasoningEffort.High -> Modifier.offset(x = 4.dp, y = 20.dp)
+                            ReasoningEffort.Max -> Modifier.offset(x = 0.dp, y = 36.dp)
+                        }
                         Text(
                             text = labels[index],
                             modifier = Modifier
-                                .height(itemHeight)
+                                .align(alignment)
+                                .then(position)
                                 .background(
                                     if (selected == effort) ElementTheme.colors.bgActionPrimaryRest else ElementTheme.colors.bgSubtleSecondary,
-                                    RoundedCornerShape(12.dp),
+                                    RoundedCornerShape(18.dp),
                                 )
-                                .padding(horizontal = 20.dp, vertical = 13.dp),
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
                             style = ElementTheme.typography.fontBodyMdRegular,
                             color = if (selected == effort) ElementTheme.colors.textOnSolidPrimary else ElementTheme.colors.textPrimary,
                         )
                     }
                     Text(
                         text = stringResource(R.string.rich_text_editor_reasoning_cancel),
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 13.dp),
-                        style = ElementTheme.typography.fontBodyMdRegular,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        style = ElementTheme.typography.fontBodySmRegular,
                         color = ElementTheme.colors.textSecondary,
                     )
                 }
@@ -705,7 +722,11 @@ private fun ReasoningEndButton(
                             onDrag = { change, amount ->
                                 change.consume()
                                 dragOffset += amount
-                                val newSelection = reasoningEffortForDrag(-dragOffset.y, dragOffset.x, itemHeightPx)
+                                val newSelection = reasoningEffortForDrag(
+                                    horizontalDragPx = dragOffset.x,
+                                    verticalDragPx = dragOffset.y,
+                                    activationThresholdPx = activationThresholdPx,
+                                )
                                 if (newSelection != selected) {
                                     selected = newSelection
                                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)

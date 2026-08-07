@@ -13,19 +13,26 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class ReasoningSwipeSelectionTest {
+    private val threshold = 24f
+
     @Test
-    fun `drag maps to discrete effort levels and clamps at max`() {
-        assertEquals(ReasoningEffort.Low, reasoningEffortForDrag(25f, 0f, 48f))
-        assertEquals(ReasoningEffort.Medium, reasoningEffortForDrag(72f, 0f, 48f))
-        assertEquals(ReasoningEffort.High, reasoningEffortForDrag(120f, 0f, 48f))
-        assertEquals(ReasoningEffort.Max, reasoningEffortForDrag(168f, 0f, 48f))
-        assertEquals(ReasoningEffort.Max, reasoningEffortForDrag(400f, 0f, 48f))
+    fun `direction maps to discrete effort levels`() {
+        assertEquals(ReasoningEffort.Low, reasoningEffortForDrag(-100f, 0f, threshold))
+        assertEquals(ReasoningEffort.Medium, reasoningEffortForDrag(-100f, -80f, threshold))
+        assertEquals(ReasoningEffort.High, reasoningEffortForDrag(0f, -100f, threshold))
+        assertEquals(ReasoningEffort.Max, reasoningEffortForDrag(50f, -100f, threshold))
     }
 
     @Test
-    fun `short downward and far sideways drags select cancel`() {
-        assertNull(reasoningEffortForDrag(23f, 0f, 48f))
-        assertNull(reasoningEffortForDrag(-40f, 0f, 48f))
-        assertNull(reasoningEffortForDrag(100f, 97f, 48f))
+    fun `magnitude does not change selection after activation`() {
+        assertEquals(ReasoningEffort.Medium, reasoningEffortForDrag(-30f, -20f, threshold))
+        assertEquals(ReasoningEffort.Medium, reasoningEffortForDrag(-300f, -200f, threshold))
+    }
+
+    @Test
+    fun `short downward and outward drags cancel`() {
+        assertNull(reasoningEffortForDrag(-10f, -10f, threshold))
+        assertNull(reasoningEffortForDrag(0f, 100f, threshold))
+        assertNull(reasoningEffortForDrag(100f, 0f, threshold))
     }
 }

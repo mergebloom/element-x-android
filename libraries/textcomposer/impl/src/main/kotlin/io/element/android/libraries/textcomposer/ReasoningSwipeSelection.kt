@@ -8,13 +8,34 @@
 package io.element.android.libraries.textcomposer
 
 import io.element.android.libraries.textcomposer.model.ReasoningEffort
-import kotlin.math.abs
+import kotlin.math.atan2
+import kotlin.math.hypot
 
+/**
+ * Maps a deliberate drag from the send button to a reasoning effort using only
+ * its direction once [activationThresholdPx] has been crossed.
+ *
+ * The available fan runs inward from the lower-right send button:
+ * left -> low, up-left -> medium, up -> high, and up-right -> max.
+ */
 internal fun reasoningEffortForDrag(
-    upwardDragPx: Float,
     horizontalDragPx: Float,
-    itemHeightPx: Float,
+    verticalDragPx: Float,
+    activationThresholdPx: Float,
 ): ReasoningEffort? {
-    if (itemHeightPx <= 0f || upwardDragPx < itemHeightPx / 2f || abs(horizontalDragPx) > itemHeightPx * 2f) return null
-    return ReasoningEffort.entries[((upwardDragPx - itemHeightPx / 2f) / itemHeightPx).toInt().coerceIn(0, ReasoningEffort.entries.lastIndex)]
+    if (activationThresholdPx <= 0f || hypot(horizontalDragPx, verticalDragPx) < activationThresholdPx) return null
+
+    // Screen Y grows downward. Measure the angle from inward/left (0 degrees)
+    // through upward (90 degrees) toward outward/right (180 degrees).
+    val angleDegrees = Math.toDegrees(
+        atan2(-verticalDragPx.toDouble(), -horizontalDragPx.toDouble())
+    ).toFloat()
+
+    return when {
+        angleDegrees < -22.5f || angleDegrees > 145f -> null
+        angleDegrees < 22.5f -> ReasoningEffort.Low
+        angleDegrees < 56.25f -> ReasoningEffort.Medium
+        angleDegrees < 101.25f -> ReasoningEffort.High
+        else -> ReasoningEffort.Max
+    }
 }
