@@ -560,11 +560,13 @@ class MessageComposerPresenter(
         when (capturedMode) {
             is MessageComposerMode.Attachment,
             is MessageComposerMode.Normal -> timelineController.invokeOnCurrentTimeline {
-                sendMessage(
-                    body = message.markdown,
-                    htmlBody = reasoningFormattedBody(message.markdown, message.html, reasoningEffort),
-                    intentionalMentions = message.intentionalMentions
-                )
+                sendAfterSettingReasoning(reasoningEffort) {
+                    sendMessage(
+                        body = message.markdown,
+                        htmlBody = message.html,
+                        intentionalMentions = message.intentionalMentions
+                    )
+                }
             }
             is MessageComposerMode.Edit -> {
                 timelineController.invokeOnCurrentTimeline {
@@ -591,12 +593,14 @@ class MessageComposerPresenter(
             is MessageComposerMode.Reply -> {
                 timelineController.invokeOnCurrentTimeline {
                     with(capturedMode) {
-                        replyMessage(
-                            body = message.markdown,
-                            htmlBody = reasoningFormattedBody(message.markdown, message.html, reasoningEffort),
-                            intentionalMentions = message.intentionalMentions,
-                            repliedToEventId = eventId,
-                        )
+                        sendAfterSettingReasoning(reasoningEffort) {
+                            replyMessage(
+                                body = message.markdown,
+                                htmlBody = message.html,
+                                intentionalMentions = message.intentionalMentions,
+                                repliedToEventId = eventId,
+                            )
+                        }
                     }
                 }
             }

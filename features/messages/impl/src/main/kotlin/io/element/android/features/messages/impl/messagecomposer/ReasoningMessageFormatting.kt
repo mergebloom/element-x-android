@@ -7,25 +7,28 @@
 
 package io.element.android.features.messages.impl.messagecomposer
 
+import io.element.android.libraries.matrix.api.timeline.Timeline
 import io.element.android.libraries.textcomposer.model.ReasoningEffort
 
-internal fun reasoningFormattedBody(body: String, htmlBody: String?, effort: ReasoningEffort?): String? {
-    if (effort == null) return htmlBody
-    val content = htmlBody ?: body.escapeHtml()
-    return "<span data-hermes-reasoning=\"${effort.wireValue}\">$content</span>"
-}
+internal fun reasoningCommand(effort: ReasoningEffort): String = "/reasoning ${effort.wireValue}"
 
-private fun String.escapeHtml(): String = buildString(length) {
-    this@escapeHtml.forEach { character ->
-        append(
-            when (character) {
-                '&' -> "&amp;"
-                '<' -> "&lt;"
-                '>' -> "&gt;"
-                '"' -> "&quot;"
-                '\'' -> "&#39;"
-                else -> character
-            }
+/**
+ * Sends the visible Hermes command first and only submits the user's message
+ * after Matrix has accepted that command. This preserves room ordering and
+ * avoids sending a prompt at the wrong effort when the command fails.
+ */
+internal suspend fun Timeline.sendAfterSettingReasoning(
+    effort: ReasoningEffort?,
+    sendUserMessage: suspend Timeline.() -> Result<Unit>,
+): Result<Unit> {
+    if (effort != null) {
+        val commandResult = sendMessage(
+            body = reasoningCommand(effort),
+            htmlBody = null,
+            intentionalMentions = emptyList(),
+            asPlainText = true,
         )
+        if (commandResult.isFailure) return commandResult
     }
+    return sendUserMessage()
 }
