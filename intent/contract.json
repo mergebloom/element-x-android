@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "requirements": ["EX-001", "EX-002", "EX-003", "EX-004"],
+  "layers": ["unit", "presenter", "ui", "build", "external_protocol", "release"],
+  "checks": [
+    {
+      "id": "reasoning-angle",
+      "layer": "unit",
+      "requirements": ["EX-001"],
+      "description": "Angle selection, same-ray invariance, activation and cancellation boundaries."
+    },
+    {
+      "id": "client-command-order",
+      "layer": "unit",
+      "requirements": ["EX-002", "EX-003"],
+      "description": "Client submission ordering, suspension/failure, unchanged body and null-effort send."
+    },
+    {
+      "id": "evidence-integrity",
+      "layer": "unit",
+      "requirements": ["EX-001", "EX-002", "EX-003", "EX-004"],
+      "description": "Validator regression tests and negative controls; not Android behavior evidence."
+    },
+    {
+      "id": "composer-routing",
+      "layer": "presenter",
+      "requirements": ["EX-002", "EX-003"],
+      "description": "Actual presenter send/reply/edit/draft routes and retained upstream behavior."
+    },
+    {
+      "id": "composer-geometry",
+      "layer": "ui",
+      "requirements": ["EX-001", "EX-003"],
+      "description": "Circular nonoverlapping layout, real gestures, ordinary tap and accessibility."
+    },
+    {
+      "id": "debug-apk",
+      "layer": "build",
+      "requirements": ["EX-004"],
+      "description": "Real debug APK build, SHA-256, package/version metadata and signing identity."
+    },
+    {
+      "id": "backend-command-application",
+      "layer": "external_protocol",
+      "requirements": ["EX-002"],
+      "description": "Authorized backend canary for application order, scope, rejection and supported effort."
+    },
+    {
+      "id": "install-update",
+      "layer": "release",
+      "requirements": ["EX-004"],
+      "description": "Previous/current APK identity continuity, increasing versionCode and real in-place update."
+    }
+  ]
+}
