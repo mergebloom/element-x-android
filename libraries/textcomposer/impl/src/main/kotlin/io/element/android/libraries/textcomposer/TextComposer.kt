@@ -41,17 +41,17 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.onClick
@@ -673,7 +673,10 @@ private fun ReasoningEndButton(
                 .padding(bottom = 5.dp, top = 5.dp, end = 6.dp, start = startPadding)
                 .size(48.dp)
                 .then(
-                    if (params.onSendMessageWithReasoning == null) Modifier else Modifier.pointerInput(activationThresholdPx) {
+                    if (params.onSendMessageWithReasoning == null) {
+                        Modifier
+                    } else {
+                        Modifier.pointerInput(activationThresholdPx) {
                         detectDragGestures(
                             onDragStart = {
                                 dragging = true
@@ -704,6 +707,7 @@ private fun ReasoningEndButton(
                                 if (effort != null) currentReasoningSend?.invoke(effort)
                             },
                         )
+                    }
                     }
                 )
                 .clearAndSetSemantics {

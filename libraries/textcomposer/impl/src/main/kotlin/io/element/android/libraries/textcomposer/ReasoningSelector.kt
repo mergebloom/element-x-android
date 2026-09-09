@@ -27,9 +27,9 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import io.element.android.compound.theme.ElementTheme
-import io.element.android.libraries.designsystem.theme.components.Text
 import io.element.android.libraries.designsystem.preview.ElementPreview
 import io.element.android.libraries.designsystem.preview.PreviewsDayNight
+import io.element.android.libraries.designsystem.theme.components.Text
 import io.element.android.libraries.textcomposer.model.ReasoningEffort
 
 /** Actual selector used by the send-button popup; short labels have disjoint layout cells. */

@@ -597,7 +597,11 @@ class MessageComposerPresenterTest : RobolectricTest() {
             advanceUntilIdle()
 
             assert(sendMessageLambda).isCalledOnce().with(
-                value("/reasoning max"), value(null), value(emptyList<IntentionalMention>()), value(MsgType.MSG_TYPE_TEXT), value(true),
+                value("/reasoning max"),
+                value(null),
+                value(emptyList<IntentionalMention>()),
+                value(MsgType.MSG_TYPE_TEXT),
+                value(true),
             )
             cancelAndIgnoreRemainingEvents()
         }
@@ -682,7 +686,11 @@ class MessageComposerPresenterTest : RobolectricTest() {
             advanceUntilIdle()
 
             assert(sendMessageLambda).isCalledOnce().with(
-                value("/reasoning low"), value(null), value(emptyList<IntentionalMention>()), value(MsgType.MSG_TYPE_TEXT), value(true),
+                value("/reasoning low"),
+                value(null),
+                value(emptyList<IntentionalMention>()),
+                value(MsgType.MSG_TYPE_TEXT),
+                value(true),
             )
             assert(replyMessageLambda).isNeverCalled()
             cancelAndIgnoreRemainingEvents()
@@ -715,7 +723,10 @@ class MessageComposerPresenterTest : RobolectricTest() {
 
             assert(sendMessageLambda).isNeverCalled()
             assert(editMessageLambda).isCalledOnce().with(
-                value(AN_EVENT_ID.toEventOrTransactionId()), value(ANOTHER_MESSAGE), value(ANOTHER_MESSAGE), value(emptyList<IntentionalMention>()),
+                value(AN_EVENT_ID.toEventOrTransactionId()),
+                value(ANOTHER_MESSAGE),
+                value(ANOTHER_MESSAGE),
+                value(emptyList<IntentionalMention>()),
             )
             assertThat(analyticsService.capturedEvents).containsExactly(
                 Composer(inThread = false, isEditing = true, isReply = false, messageType = Composer.MessageType.Text),
@@ -1981,10 +1992,19 @@ class MessageComposerPresenterTest : RobolectricTest() {
 
                 assertThat(submissions).containsExactly("/reasoning medium", A_REPLY).inOrder()
                 assert(currentSendMessageLambda).isCalledOnce().with(
-                    value("/reasoning medium"), value(null), value(emptyList<IntentionalMention>()), value(MsgType.MSG_TYPE_TEXT), value(true),
+                    value("/reasoning medium"),
+                    value(null),
+                    value(emptyList<IntentionalMention>()),
+                    value(MsgType.MSG_TYPE_TEXT),
+                    value(true),
                 )
                 assert(currentReplyMessageLambda).isCalledOnce().with(
-                    value(AN_EVENT_ID), value(A_REPLY), value(A_REPLY), value(emptyList<IntentionalMention>()), value(false), value(MsgType.MSG_TYPE_TEXT),
+                    value(AN_EVENT_ID),
+                    value(A_REPLY),
+                    value(A_REPLY),
+                    value(emptyList<IntentionalMention>()),
+                    value(false),
+                    value(MsgType.MSG_TYPE_TEXT),
                 )
                 assert(liveSendMessageLambda).isNeverCalled()
                 assert(liveReplyMessageLambda).isNeverCalled()

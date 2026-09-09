@@ -26,8 +26,8 @@ import io.element.android.libraries.designsystem.components.async.AsyncActionVie
 import io.element.android.libraries.designsystem.preview.ElementPreview
 import io.element.android.libraries.designsystem.preview.PreviewsDayNight
 import io.element.android.libraries.textcomposer.TextComposer
-import io.element.android.libraries.textcomposer.model.Suggestion
 import io.element.android.libraries.textcomposer.model.ReasoningEffort
+import io.element.android.libraries.textcomposer.model.Suggestion
 import io.element.android.libraries.textcomposer.model.VoiceMessagePlayerEvent
 import io.element.android.libraries.textcomposer.model.VoiceMessageRecorderEvent
 import kotlinx.coroutines.launch
