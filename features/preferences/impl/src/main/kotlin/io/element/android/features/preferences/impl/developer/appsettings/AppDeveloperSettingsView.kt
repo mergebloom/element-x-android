@@ -42,7 +42,6 @@ import kotlinx.collections.immutable.toImmutableList
 @Composable
 fun AppDeveloperSettingsView(
     state: AppDeveloperSettingsState,
-    onOpenShowkase: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -82,20 +81,12 @@ fun AppDeveloperSettingsView(
                 )
             }
         }
-        PreferenceCategory(title = "Showkase") {
-            ListItem(
-                headlineContent = {
-                    Text("Open Showkase browser")
-                },
-                onClick = onOpenShowkase
-            )
-        }
         RageshakePreferencesView(
             state = state.rageshakeState,
         )
         PreferenceCategory(title = "Crash") {
             ListItem(
-                headlineContent = {
+                content = {
                     Text("Crash the app 💥")
                 },
                 onClick = { error("This crash is a test.") }
@@ -117,7 +108,7 @@ private fun GitCategory(
         val toastMessage = stringResource(CommonStrings.common_copied_to_clipboard)
         val context = LocalContext.current
         ListItem(
-            headlineContent = { Text("Git branch") },
+            content = { Text("Git branch") },
             supportingContent = { Text(text = gitBranch) },
             onClick = {
                 context.copyToClipboard(
@@ -127,7 +118,7 @@ private fun GitCategory(
             }
         )
         ListItem(
-            headlineContent = { Text("Git SHA") },
+            content = { Text("Git SHA") },
             supportingContent = { Text(text = gitSha) },
             onClick = {
                 context.copyToClipboard(
@@ -182,10 +173,9 @@ private fun FeatureListContent(
 @PreviewsDayNight
 @Composable
 internal fun AppDeveloperSettingsViewPreview(
-    @PreviewParameter(AppDeveloperSettingsStateProvider::class) state: AppDeveloperSettingsState
+    @PreviewParameter(AppDeveloperSettingsStatePreviewParam::class) state: AppDeveloperSettingsState
 ) = ElementPreview {
     AppDeveloperSettingsView(
         state = state,
-        onOpenShowkase = {},
     )
 }
