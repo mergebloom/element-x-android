@@ -44,8 +44,9 @@ android {
     defaultConfig {
         applicationId = BuildTimeConfig.APPLICATION_ID
         targetSdk = Versions.TARGET_SDK
-        versionCode = Versions.VERSION_CODE
-        versionName = Versions.VERSION_NAME
+        // Fork validation sequence; APK ABI suffix is applied below. Advance for every distributed replacement.
+        versionCode = maxOf(Versions.VERSION_CODE, 20_260_902)
+        versionName = "${Versions.VERSION_NAME}-reasoning.1"
 
         // Keep abiFilter for the universalApk
         ndk {

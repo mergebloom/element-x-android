@@ -10,7 +10,6 @@ package io.element.android.libraries.textcomposer
 
 import android.content.res.Configuration
 import android.net.Uri
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,7 +29,6 @@ import androidx.compose.foundation.layout.requiredHeightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -45,7 +43,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -257,6 +254,8 @@ fun TextComposer(
         composerMode.isEditing,
         voiceMessageState.endButtonKey(),
         canSendTextMessage,
+        reasoningSwipeEnabled,
+        onSendMessageWithReasoning,
     ) {
         when {
             composerMode.isEditing -> EndButtonParams(
@@ -341,7 +340,7 @@ fun TextComposer(
     }
 
     @Composable
-    fun rememberEndButtonParamsFormatting() = remember(composerMode.isEditing, canSendTextMessage) {
+    fun rememberEndButtonParamsFormatting() = remember(composerMode.isEditing, canSendTextMessage, reasoningSwipeEnabled, onSendMessageWithReasoning) {
         if (composerMode.isEditing) {
             EndButtonParams(
                 endButtonContentDescriptionResId = CommonStrings.action_send_edited_message,
@@ -650,6 +649,7 @@ private fun ReasoningEndButton(
         stringResource(R.string.rich_text_editor_reasoning_high),
         stringResource(R.string.rich_text_editor_reasoning_max),
     )
+    val currentReasoningSend by rememberUpdatedState(params.onSendMessageWithReasoning)
     val actions = params.onSendMessageWithReasoning?.let { send ->
         ReasoningEffort.entries.mapIndexed { index, effort ->
             CustomAccessibilityAction(labels[index]) {
@@ -665,81 +665,7 @@ private fun ReasoningEndButton(
                 offset = IntOffset(0, with(LocalDensity.current) { (-56).dp.roundToPx() }),
                 properties = PopupProperties(focusable = false),
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(width = 288.dp, height = 176.dp),
-                ) {
-                    val restingColor = ElementTheme.colors.bgSubtleSecondary
-                    val selectedColor = ElementTheme.colors.bgActionPrimaryRest
-                    val dividerColor = ElementTheme.colors.borderDisabled
-                    Canvas(modifier = Modifier.fillMaxSize()) {
-                        val radius = size.width / 2f
-                        val center = Offset(size.width / 2f, size.height - 8.dp.toPx())
-                        val topLeft = Offset(center.x - radius, center.y - radius)
-                        val arcSize = androidx.compose.ui.geometry.Size(radius * 2f, radius * 2f)
-
-                        ReasoningEffort.entries.forEachIndexed { index, effort ->
-                            drawArc(
-                                color = if (selected == effort) selectedColor else restingColor,
-                                startAngle = 180f + index * 45f,
-                                sweepAngle = 45f,
-                                useCenter = true,
-                                topLeft = topLeft,
-                                size = arcSize,
-                            )
-                            drawArc(
-                                color = dividerColor,
-                                startAngle = 180f + index * 45f,
-                                sweepAngle = 45f,
-                                useCenter = true,
-                                topLeft = topLeft,
-                                size = arcSize,
-                                style = Stroke(width = 1.dp.toPx()),
-                            )
-                        }
-                        drawCircle(
-                            color = restingColor,
-                            radius = 45.dp.toPx(),
-                            center = center,
-                        )
-                        drawCircle(
-                            color = dividerColor,
-                            radius = 45.dp.toPx(),
-                            center = center,
-                            style = Stroke(width = 1.dp.toPx()),
-                        )
-                    }
-                    ReasoningEffort.entries.forEach { effort ->
-                        val index = ReasoningEffort.entries.indexOf(effort)
-                        val alignment = when (effort) {
-                            ReasoningEffort.Low -> Alignment.BottomStart
-                            ReasoningEffort.Medium -> Alignment.TopStart
-                            ReasoningEffort.High -> Alignment.TopEnd
-                            ReasoningEffort.Max -> Alignment.BottomEnd
-                        }
-                        Text(
-                            text = labels[index],
-                            modifier = Modifier
-                                .align(alignment)
-                                .padding(
-                                    start = if (effort == ReasoningEffort.Low) 20.dp else 48.dp,
-                                    end = if (effort == ReasoningEffort.Max) 20.dp else 48.dp,
-                                    top = if (effort == ReasoningEffort.Medium || effort == ReasoningEffort.High) 48.dp else 0.dp,
-                                    bottom = if (effort == ReasoningEffort.Low || effort == ReasoningEffort.Max) 40.dp else 0.dp,
-                                ),
-                            style = ElementTheme.typography.fontBodyMdRegular,
-                            color = if (selected == effort) ElementTheme.colors.textOnSolidPrimary else ElementTheme.colors.textPrimary,
-                        )
-                    }
-                    Text(
-                        text = stringResource(R.string.rich_text_editor_reasoning_cancel),
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = 22.dp),
-                        style = ElementTheme.typography.fontBodySmRegular,
-                        color = ElementTheme.colors.textSecondary,
-                    )
-                }
+                ReasoningSelector(selected = selected)
             }
         }
         IconButton(
@@ -747,7 +673,7 @@ private fun ReasoningEndButton(
                 .padding(bottom = 5.dp, top = 5.dp, end = 6.dp, start = startPadding)
                 .size(48.dp)
                 .then(
-                    if (params.onSendMessageWithReasoning == null) Modifier else Modifier.pointerInput(params.onSendMessageWithReasoning) {
+                    if (params.onSendMessageWithReasoning == null) Modifier else Modifier.pointerInput(activationThresholdPx) {
                         detectDragGestures(
                             onDragStart = {
                                 dragging = true
@@ -775,7 +701,7 @@ private fun ReasoningEndButton(
                                 val effort = selected
                                 dragging = false
                                 selected = null
-                                if (effort != null) params.onSendMessageWithReasoning.invoke(effort)
+                                if (effort != null) currentReasoningSend?.invoke(effort)
                             },
                         )
                     }

@@ -102,6 +102,7 @@ import io.element.android.libraries.textcomposer.mentions.MentionSpanProvider
 import io.element.android.libraries.textcomposer.mentions.MentionSpanTheme
 import io.element.android.libraries.textcomposer.mentions.ResolvedSuggestion
 import io.element.android.libraries.textcomposer.model.MessageComposerMode
+import io.element.android.libraries.textcomposer.model.ReasoningEffort
 import io.element.android.libraries.textcomposer.model.Suggestion
 import io.element.android.libraries.textcomposer.model.SuggestionType
 import io.element.android.libraries.textcomposer.model.TextEditorState
@@ -117,7 +118,9 @@ import io.element.android.tests.testutils.waitForPredicate
 import io.mockk.mockk
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -463,6 +466,289 @@ class MessageComposerPresenterTest : RobolectricTest() {
                     messageType = Composer.MessageType.Text,
                 )
             )
+        }
+    }
+
+    @Test
+    fun `present - selected reasoning submits plain command before rich message with mentions`() = runTest {
+        val sendMessageLambda = lambdaRecorder { _: String, _: String?, _: List<IntentionalMention>, _: MsgType, _: Boolean ->
+            Result.success(Unit)
+        }
+        val timeline = FakeTimeline().apply {
+            this.sendMessageLambda = sendMessageLambda
+        }
+        val presenter = createPresenter(
+            room = FakeJoinedRoom(liveTimeline = timeline, typingNoticeResult = { Result.success(Unit) }),
+            slashCommandService = FakeSlashCommandService(parseResult = { _, _, _ -> SlashCommand.NotACommand }),
+        )
+        presenter.test {
+            val state = awaitFirstItem()
+            state.textEditorState.setHtml(A_MESSAGE)
+            (state.textEditorState as TextEditorState.Rich).richTextEditorState.mentionsState = MentionsState(
+                userIds = listOf(A_USER_ID_2.value),
+                roomIds = emptyList(),
+                roomAliases = emptyList(),
+                hasAtRoomMention = true,
+            )
+            state.eventSink(MessageComposerEvent.SendMessageWithReasoning(ReasoningEffort.High))
+            advanceUntilIdle()
+
+            // These assertions cover client submission, not backend application of the selected effort.
+            assert(sendMessageLambda).isCalledExactly(2).withSequence(
+                listOf(value("/reasoning high"), value(null), value(emptyList<IntentionalMention>()), value(MsgType.MSG_TYPE_TEXT), value(true)),
+                listOf(
+                    value(A_MESSAGE),
+                    value(A_MESSAGE),
+                    value(listOf(IntentionalMention.Room, IntentionalMention.User(A_USER_ID_2))),
+                    value(MsgType.MSG_TYPE_TEXT),
+                    value(false),
+                ),
+            )
+            assertThat(state.textEditorState.messageHtml()).isEmpty()
+            assertThat(analyticsService.capturedEvents).containsExactly(
+                Composer(inThread = false, isEditing = false, isReply = false, messageType = Composer.MessageType.Text),
+            )
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `present - ordinary plain send does not reuse a previous selected reasoning effort`() = runTest {
+        val sendMessageLambda = lambdaRecorder { _: String, _: String?, _: List<IntentionalMention>, _: MsgType, _: Boolean ->
+            Result.success(Unit)
+        }
+        val timeline = FakeTimeline().apply {
+            this.sendMessageLambda = sendMessageLambda
+        }
+        val permalinkBuilder = FakePermalinkBuilder()
+        val presenter = createPresenter(
+            room = FakeJoinedRoom(liveTimeline = timeline, typingNoticeResult = { Result.success(Unit) }),
+            isRichTextEditorEnabled = false,
+            permalinkBuilder = permalinkBuilder,
+            slashCommandService = FakeSlashCommandService(parseResult = { _, _, _ -> SlashCommand.NotACommand }),
+        )
+        presenter.test {
+            val state = awaitFirstItem()
+            state.textEditorState.setMarkdown(A_MESSAGE)
+            state.eventSink(MessageComposerEvent.SendMessageWithReasoning(ReasoningEffort.Low))
+            advanceUntilIdle()
+            assertThat(state.textEditorState.messageMarkdown(permalinkBuilder)).isEmpty()
+
+            state.textEditorState.setMarkdown(ANOTHER_MESSAGE)
+            state.eventSink(MessageComposerEvent.SendMessage)
+            advanceUntilIdle()
+
+            assert(sendMessageLambda).isCalledExactly(3).withSequence(
+                listOf(value("/reasoning low"), value(null), value(emptyList<IntentionalMention>()), value(MsgType.MSG_TYPE_TEXT), value(true)),
+                listOf(value(A_MESSAGE), value(null), value(emptyList<IntentionalMention>()), value(MsgType.MSG_TYPE_TEXT), value(false)),
+                listOf(value(ANOTHER_MESSAGE), value(null), value(emptyList<IntentionalMention>()), value(MsgType.MSG_TYPE_TEXT), value(false)),
+            )
+            assertThat(state.textEditorState.messageMarkdown(permalinkBuilder)).isEmpty()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `present - selected reasoning leaves upstream slash command handling unchanged`() = runTest {
+        val sendMessageLambda = lambdaRecorder { _: String, _: String?, _: List<IntentionalMention>, _: MsgType, _: Boolean ->
+            Result.success(Unit)
+        }
+        val timeline = FakeTimeline().apply {
+            this.sendMessageLambda = sendMessageLambda
+        }
+        val slashCommand = SlashCommand.SendPlainText(A_MESSAGE)
+        val proceedSendMessageLambda = lambdaRecorder { _: SlashCommand.SlashCommandSendMessage, _: Timeline -> Result.success(Unit) }
+        val presenter = createPresenter(
+            room = FakeJoinedRoom(liveTimeline = timeline, typingNoticeResult = { Result.success(Unit) }),
+            isRichTextEditorEnabled = false,
+            slashCommandService = FakeSlashCommandService(
+                parseResult = { _, _, _ -> slashCommand },
+                proceedSendMessageResult = proceedSendMessageLambda,
+            ),
+        )
+        presenter.test {
+            val state = awaitFirstItem()
+            state.textEditorState.setMarkdown("/plain $A_MESSAGE")
+            state.eventSink(MessageComposerEvent.SendMessageWithReasoning(ReasoningEffort.High))
+            advanceUntilIdle()
+
+            assert(proceedSendMessageLambda).isCalledOnce().with(value(slashCommand), value(timeline))
+            assert(sendMessageLambda).isNeverCalled()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `present - failed reasoning command submission blocks normal message submission`() = runTest {
+        val sendMessageLambda = lambdaRecorder { _: String, _: String?, _: List<IntentionalMention>, _: MsgType, _: Boolean ->
+            Result.failure<Unit>(IllegalStateException("command submission failed"))
+        }
+        val timeline = FakeTimeline().apply {
+            this.sendMessageLambda = sendMessageLambda
+        }
+        val presenter = createPresenter(
+            room = FakeJoinedRoom(liveTimeline = timeline, typingNoticeResult = { Result.success(Unit) }),
+            slashCommandService = FakeSlashCommandService(parseResult = { _, _, _ -> SlashCommand.NotACommand }),
+        )
+        presenter.test {
+            val state = awaitFirstItem()
+            state.textEditorState.setHtml(A_MESSAGE)
+            state.eventSink(MessageComposerEvent.SendMessageWithReasoning(ReasoningEffort.Max))
+            advanceUntilIdle()
+
+            assert(sendMessageLambda).isCalledOnce().with(
+                value("/reasoning max"), value(null), value(emptyList<IntentionalMention>()), value(MsgType.MSG_TYPE_TEXT), value(true),
+            )
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `present - selected reasoning waits for suspended command submission before submitting body`() = runTest {
+        val commandStarted = CompletableDeferred<Unit>()
+        val commandResult = CompletableDeferred<Result<Unit>>()
+        val submissions = mutableListOf<String>()
+        val timeline = object : Timeline by FakeTimeline() {
+            override suspend fun sendMessage(
+                body: String,
+                htmlBody: String?,
+                intentionalMentions: List<IntentionalMention>,
+                msgType: MsgType,
+                asPlainText: Boolean,
+            ): Result<Unit> {
+                submissions += body
+                return if (body == "/reasoning medium") {
+                    commandStarted.complete(Unit)
+                    commandResult.await()
+                } else {
+                    Result.success(Unit)
+                }
+            }
+        }
+        val presenter = createPresenter(
+            room = FakeJoinedRoom(liveTimeline = timeline, typingNoticeResult = { Result.success(Unit) }),
+            slashCommandService = FakeSlashCommandService(parseResult = { _, _, _ -> SlashCommand.NotACommand }),
+        )
+        presenter.test {
+            val state = awaitFirstItem()
+            state.textEditorState.setHtml(A_MESSAGE)
+            state.eventSink(MessageComposerEvent.SendMessageWithReasoning(ReasoningEffort.Medium))
+            try {
+                advanceUntilIdle()
+                assertThat(commandStarted.isCompleted).isTrue()
+                assertThat(submissions).containsExactly("/reasoning medium")
+            } finally {
+                // Release the session-scope send even if an ordering assertion fails.
+                commandResult.complete(Result.success(Unit))
+            }
+            advanceUntilIdle()
+            assertThat(submissions).containsExactly("/reasoning medium", A_MESSAGE).inOrder()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `present - selected reasoning reply preserves event association on focused timeline`() = runTest {
+        assertSelectedReasoningReplyUsesCurrentTimeline(threadRoot = null)
+    }
+
+    @Test
+    fun `present - selected reasoning reply preserves event association on thread timeline`() = runTest {
+        assertSelectedReasoningReplyUsesCurrentTimeline(threadRoot = A_THREAD_ID)
+    }
+
+    @Test
+    fun `present - failed reasoning command submission blocks reply submission`() = runTest {
+        val sendMessageLambda = lambdaRecorder { _: String, _: String?, _: List<IntentionalMention>, _: MsgType, _: Boolean ->
+            Result.failure<Unit>(IllegalStateException("command submission failed"))
+        }
+        val replyMessageLambda = lambdaRecorder { _: EventId?, _: String, _: String?, _: List<IntentionalMention>, _: Boolean, _: MsgType ->
+            Result.success(Unit)
+        }
+        val timeline = FakeTimeline().apply {
+            this.sendMessageLambda = sendMessageLambda
+            this.replyMessageLambda = replyMessageLambda
+        }
+        val presenter = createPresenter(
+            room = FakeJoinedRoom(liveTimeline = timeline, typingNoticeResult = { Result.success(Unit) }),
+        )
+        presenter.test {
+            val state = awaitFirstItem()
+            state.eventSink(MessageComposerEvent.SetMode(aReplyMode()))
+            val replyState = awaitItem()
+            assertThat(replyState.mode).isEqualTo(aReplyMode())
+            replyState.textEditorState.setHtml(A_REPLY)
+            replyState.eventSink(MessageComposerEvent.SendMessageWithReasoning(ReasoningEffort.Low))
+            advanceUntilIdle()
+
+            assert(sendMessageLambda).isCalledOnce().with(
+                value("/reasoning low"), value(null), value(emptyList<IntentionalMention>()), value(MsgType.MSG_TYPE_TEXT), value(true),
+            )
+            assert(replyMessageLambda).isNeverCalled()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `present - selected reasoning is ignored when editing a message`() = runTest {
+        val sendMessageLambda = lambdaRecorder { _: String, _: String?, _: List<IntentionalMention>, _: MsgType, _: Boolean ->
+            Result.success(Unit)
+        }
+        val editMessageLambda = lambdaRecorder { _: EventOrTransactionId, _: String, _: String?, _: List<IntentionalMention> ->
+            Result.success(Unit)
+        }
+        val timeline = FakeTimeline().apply {
+            this.sendMessageLambda = sendMessageLambda
+            this.editMessageLambda = editMessageLambda
+        }
+        val presenter = createPresenter(
+            room = FakeJoinedRoom(liveTimeline = timeline, typingNoticeResult = { Result.success(Unit) }),
+        )
+        presenter.test {
+            val state = awaitFirstItem()
+            state.eventSink(MessageComposerEvent.SetMode(anEditMode()))
+            val editState = awaitItem()
+            assertThat(editState.mode).isEqualTo(anEditMode())
+            editState.textEditorState.setHtml(ANOTHER_MESSAGE)
+            editState.eventSink(MessageComposerEvent.SendMessageWithReasoning(ReasoningEffort.Max))
+            advanceUntilIdle()
+
+            assert(sendMessageLambda).isNeverCalled()
+            assert(editMessageLambda).isCalledOnce().with(
+                value(AN_EVENT_ID.toEventOrTransactionId()), value(ANOTHER_MESSAGE), value(ANOTHER_MESSAGE), value(emptyList<IntentionalMention>()),
+            )
+            assertThat(analyticsService.capturedEvents).containsExactly(
+                Composer(inThread = false, isEditing = true, isReply = false, messageType = Composer.MessageType.Text),
+            )
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `present - selected reasoning is ignored when editing a caption`() = runTest {
+        val sendMessageLambda = lambdaRecorder { _: String, _: String?, _: List<IntentionalMention>, _: MsgType, _: Boolean ->
+            Result.success(Unit)
+        }
+        val editCaptionLambda = lambdaRecorder { _: EventOrTransactionId, _: String?, _: String? -> Result.success(Unit) }
+        val timeline = FakeTimeline().apply {
+            this.sendMessageLambda = sendMessageLambda
+            this.editCaptionLambda = editCaptionLambda
+        }
+        val presenter = createPresenter(
+            room = FakeJoinedRoom(liveTimeline = timeline, typingNoticeResult = { Result.success(Unit) }),
+            isRichTextEditorEnabled = false,
+        )
+        presenter.test {
+            val state = awaitFirstItem()
+            state.eventSink(MessageComposerEvent.SetMode(anEditCaptionMode()))
+            val editState = awaitItem()
+            assertThat(editState.mode).isEqualTo(anEditCaptionMode())
+            editState.eventSink(MessageComposerEvent.SendMessageWithReasoning(ReasoningEffort.High))
+            advanceUntilIdle()
+
+            assert(sendMessageLambda).isNeverCalled()
+            assert(editCaptionLambda).isCalledOnce().with(value(AN_EVENT_ID.toEventOrTransactionId()), value(A_CAPTION), value(null))
+            cancelAndIgnoreRemainingEvents()
         }
     }
 
@@ -1643,6 +1929,71 @@ class MessageComposerPresenterTest : RobolectricTest() {
         }
     }
 
+    private suspend fun TestScope.assertSelectedReasoningReplyUsesCurrentTimeline(threadRoot: ThreadId?) {
+        val submissions = mutableListOf<String>()
+        val currentSendMessageLambda = lambdaRecorder { body: String, _: String?, _: List<IntentionalMention>, _: MsgType, _: Boolean ->
+            submissions += body
+            Result.success(Unit)
+        }
+        val currentReplyMessageLambda = lambdaRecorder { _: EventId?, body: String, _: String?, _: List<IntentionalMention>, _: Boolean, _: MsgType ->
+            submissions += body
+            Result.success(Unit)
+        }
+        val currentTimeline = FakeTimeline(
+            mode = threadRoot?.let { Timeline.Mode.Thread(it) } ?: Timeline.Mode.FocusedOnEvent(AN_EVENT_ID),
+        ).apply {
+            sendMessageLambda = currentSendMessageLambda
+            replyMessageLambda = currentReplyMessageLambda
+        }
+        val liveSendMessageLambda = lambdaRecorder { _: String, _: String?, _: List<IntentionalMention>, _: MsgType, _: Boolean -> Result.success(Unit) }
+        val liveReplyMessageLambda = lambdaRecorder { _: EventId?, _: String, _: String?, _: List<IntentionalMention>, _: Boolean, _: MsgType ->
+            Result.success(Unit)
+        }
+        val liveTimeline = FakeTimeline().apply {
+            sendMessageLambda = liveSendMessageLambda
+            replyMessageLambda = liveReplyMessageLambda
+        }
+        val room = FakeJoinedRoom(
+            liveTimeline = liveTimeline,
+            createTimelineResult = { Result.success(currentTimeline) },
+            typingNoticeResult = { Result.success(Unit) },
+        )
+        TimelineController(room, if (threadRoot != null) currentTimeline else liveTimeline).use { timelineController ->
+            if (threadRoot == null) {
+                timelineController.focusOnEvent(AN_EVENT_ID, threadRootId = null).getOrThrow()
+            }
+            // The controller initially exposes room.liveTimeline until its eager flow has collected.
+            timelineController.activeTimelineFlow().first { it === currentTimeline }
+            val presenter = createPresenter(
+                room = room,
+                threadRoot = threadRoot,
+                timelineController = timelineController,
+            )
+            presenter.test {
+                val state = awaitFirstItem()
+                assertThat(state.isInThreadTimeline).isEqualTo(threadRoot != null)
+                state.eventSink(MessageComposerEvent.SetMode(aReplyMode()))
+                val replyState = awaitItem()
+                assertThat(replyState.mode).isEqualTo(aReplyMode())
+                replyState.textEditorState.setHtml(A_REPLY)
+                replyState.eventSink(MessageComposerEvent.SendMessageWithReasoning(ReasoningEffort.Medium))
+                advanceUntilIdle()
+
+                assertThat(submissions).containsExactly("/reasoning medium", A_REPLY).inOrder()
+                assert(currentSendMessageLambda).isCalledOnce().with(
+                    value("/reasoning medium"), value(null), value(emptyList<IntentionalMention>()), value(MsgType.MSG_TYPE_TEXT), value(true),
+                )
+                assert(currentReplyMessageLambda).isCalledOnce().with(
+                    value(AN_EVENT_ID), value(A_REPLY), value(A_REPLY), value(emptyList<IntentionalMention>()), value(false), value(MsgType.MSG_TYPE_TEXT),
+                )
+                assert(liveSendMessageLambda).isNeverCalled()
+                assert(liveReplyMessageLambda).isNeverCalled()
+                assertThat(replyState.textEditorState.messageHtml()).isEmpty()
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+    }
+
     private suspend fun ReceiveTurbine<MessageComposerState>.backToNormalMode(state: MessageComposerState, skipCount: Int = 0): MessageComposerState {
         state.eventSink.invoke(MessageComposerEvent.CloseSpecialMode)
         skipItems(skipCount)
@@ -1677,6 +2028,7 @@ class MessageComposerPresenterTest : RobolectricTest() {
         threadRoot: ThreadId? = null,
         slashCommandService: SlashCommandService = FakeSlashCommandService(),
         featureFlagService: FakeFeatureFlagService = FakeFeatureFlagService(),
+        timelineController: TimelineController = TimelineController(room, timeline),
     ) = MessageComposerPresenter(
         navigator = navigator,
         sessionCoroutineScope = this,
@@ -1707,7 +2059,7 @@ class MessageComposerPresenterTest : RobolectricTest() {
         permissionsPresenterFactory = FakePermissionsPresenterFactory(permissionPresenter),
         permalinkParser = permalinkParser,
         permalinkBuilder = permalinkBuilder,
-        timelineController = TimelineController(room, timeline),
+        timelineController = timelineController,
         draftService = draftService,
         mentionSpanProvider = mentionSpanProvider,
         pillificationHelper = textPillificationHelper,

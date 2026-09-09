@@ -11,4 +11,8 @@
     <string name="rich_text_editor_reasoning_high">Send with high reasoning</string>
     <string name="rich_text_editor_reasoning_max">Send with maximum reasoning</string>
     <string name="rich_text_editor_reasoning_cancel">Cancel</string>
+    <string name="screen_reasoning_low">Low</string>
+    <string name="screen_reasoning_medium">Medium</string>
+    <string name="screen_reasoning_high">High</string>
+    <string name="screen_reasoning_max">Max</string>
 </resources>

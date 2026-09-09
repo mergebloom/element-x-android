@@ -14,8 +14,9 @@ internal fun reasoningCommand(effort: ReasoningEffort): String = "/reasoning ${e
 
 /**
  * Sends the visible Hermes command first and only submits the user's message
- * after Matrix has accepted that command. This preserves room ordering and
- * avoids sending a prompt at the wrong effort when the command fails.
+ * after the Timeline reports successful submission of that command. A failed
+ * submission blocks the prompt. This is not acknowledgement that a bot applied
+ * the setting, nor atomic ordering against concurrent sends or across sessions.
  */
 internal suspend fun Timeline.sendAfterSettingReasoning(
     effort: ReasoningEffort?,

@@ -24,7 +24,7 @@ class ReasoningMessageFormattingTest {
     }
 
     @Test
-    fun `reasoning command is accepted before user message is sent`() = runTest {
+    fun `reasoning command is submitted before user message`() = runTest {
         val sentBodies = mutableListOf<String>()
         val timeline = FakeTimeline().apply {
             sendMessageLambda = { body, _, _, _, _ ->
@@ -42,7 +42,7 @@ class ReasoningMessageFormattingTest {
     }
 
     @Test
-    fun `failed reasoning command prevents prompt from using wrong effort`() = runTest {
+    fun `failed reasoning command submission prevents user message submission`() = runTest {
         val sentBodies = mutableListOf<String>()
         val timeline = FakeTimeline().apply {
             sendMessageLambda = { body, _, _, _, _ ->

@@ -3,19 +3,24 @@ name: Hermes APK Build
 on:
   workflow_dispatch:
   push:
-    branches: [ develop ]
+    branches: [ develop, 'integration/upstream-reasoning-*' ]
 
 permissions:
   contents: read
 
+concurrency:
+  group: reasoning-validation-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
-  GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx8g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -XX:+UseG1GC -Dkotlin.daemon.jvm.options=-Xmx4g
-  CI_GRADLE_ARG_PROPERTIES: --stacktrace -Dsonar.gradle.skipCompile=true --no-configuration-cache
+  CI_GRADLE_ARG_PROPERTIES: --stacktrace --no-configuration-cache --no-parallel --max-workers=2
+  JAVA_TOOL_OPTIONS: -XX:ActiveProcessorCount=2
 
 jobs:
   build:
-    name: Test and build universal debug APK
+    name: Composer validation and debug APKs
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Use JDK 21
@@ -25,15 +30,28 @@ jobs:
           java-version: "21"
       - name: Configure Gradle
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
-      - name: Run reasoning tests
-        run: ./gradlew :libraries:textcomposer:impl:testDebugUnitTest :features:messages:impl:testDebugUnitTest --tests '*Reasoning*' $CI_GRADLE_ARG_PROPERTIES
-      - name: Build universal debug APK
-        run: ./gradlew :app:assembleGplayDebug $CI_GRADLE_ARG_PROPERTIES
-      - name: Upload universal APK
+      - name: Check evidence validator
+        run: python3 -B -m unittest discover -s intent -p 'test_*.py' -v
+      - name: Run integrated composer tests and native Compose captures
+        run: ./gradlew :libraries:textcomposer:impl:testDebugUnitTest :features:messages:impl:testDebugUnitTest -Proborazzi.test.record=true -Dorg.gradle.jvmargs="-Xmx3g -XX:ActiveProcessorCount=2" -Pkotlin.daemon.jvmargs="-Xmx2g" $CI_GRADLE_ARG_PROPERTIES
+      - name: Build debug APKs with the established debug signing identity
+        run: ./gradlew :app:assembleGplayDebug -Dorg.gradle.jvmargs="-Xmx3g -XX:ActiveProcessorCount=2" -Pkotlin.daemon.jvmargs="-Xmx2g" $CI_GRADLE_ARG_PROPERTIES
+      - name: Upload APKs for review only
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: elementx-hermes-debug-apks
+          name: elementx-reasoning-debug-apks-${{ github.sha }}
           path: |
             app/build/outputs/apk/gplay/debug/*-arm64-v8a-debug.apk
             app/build/outputs/apk/gplay/debug/*-universal-debug.apk
+            app/build/outputs/apk/gplay/debug/output-metadata.json
           if-no-files-found: error
+      - name: Preserve test and screenshot evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: composer-validation-${{ github.sha }}
+          path: |
+            libraries/textcomposer/impl/build/test-results/
+            features/messages/impl/build/test-results/
+            libraries/textcomposer/impl/build/outputs/reasoning-screenshots/
+          if-no-files-found: warn
