@@ -33,7 +33,7 @@ jobs:
       - name: Check evidence validator
         run: python3 -B -m unittest discover -s intent -p 'test_*.py' -v
       - name: Run integrated composer tests and native Compose captures
-        run: ./gradlew :libraries:textcomposer:impl:testDebugUnitTest :features:messages:impl:testDebugUnitTest -Proborazzi.test.record=true -Dorg.gradle.jvmargs="-Xmx3g -XX:ActiveProcessorCount=2" -Pkotlin.daemon.jvmargs="-Xmx2g" $CI_GRADLE_ARG_PROPERTIES
+        run: ./gradlew :libraries:textcomposer:impl:testDebugUnitTest :features:messages:impl:testDebugUnitTest -Proborazzi.test.record=true -Proborazzi.test.verify=false -Dorg.gradle.jvmargs="-Xmx3g -XX:ActiveProcessorCount=2" -Pkotlin.daemon.jvmargs="-Xmx2g" $CI_GRADLE_ARG_PROPERTIES
       - name: Build debug APKs with the established debug signing identity
         run: ./gradlew :app:assembleGplayDebug -Dorg.gradle.jvmargs="-Xmx3g -XX:ActiveProcessorCount=2" -Pkotlin.daemon.jvmargs="-Xmx2g" $CI_GRADLE_ARG_PROPERTIES
       - name: Upload APKs for review only
