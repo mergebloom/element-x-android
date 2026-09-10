@@ -67,8 +67,12 @@ def fill(node, value):
     assert re.fullmatch(r'[A-Za-z0-9_:@./-]+', value)
     tap(node)
     adb('shell', 'input', 'keyevent', 'KEYCODE_MOVE_END')
-    adb('shell', 'input', 'keyevent', '--longpress', 'KEYCODE_SHIFT_LEFT', 'KEYCODE_MOVE_HOME')
-    adb('shell', 'input', 'keyevent', 'KEYCODE_DEL')
+    existing = node.get('text', '')
+    assert len(existing) <= 256, 'Unexpectedly long editable fixture field'
+    if existing:
+        # Sequential keyevent SHIFT does not hold a modifier on Android. Delete
+        # the observed field contents explicitly, without clipboard or logs.
+        adb('shell', 'input', 'keyevent', *(['KEYCODE_DEL'] * len(existing)))
     adb('shell', 'input', 'text', value)
 
 
