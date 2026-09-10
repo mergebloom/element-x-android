@@ -946,6 +946,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
         val pending = kotlinx.coroutines.CompletableDeferred<Result<Unit>>()
         var cancelled = 0
         var attempts = 0
+        val captions = mutableListOf<String?>()
         val handler = object : io.element.android.libraries.matrix.api.media.MediaUploadHandler {
             override suspend fun await(): Result<Unit> = pending.await()
             override fun cancel() {
@@ -953,7 +954,8 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             }
         }
         val timeline = FakeTimeline().apply {
-            sendGalleryLambda = { _, _, _, _ ->
+            sendGalleryLambda = { _, caption, _, _ ->
+                captions += caption
                 attempts++
                 Result.success(if (attempts == 1) handler else FakeMediaUploadHandler())
             }
@@ -982,6 +984,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             idle.eventSink(AttachmentsPreviewEvent.SendAttachment)
             consumeItemsUntilPredicate { it.sendActionState is SendActionState.Done }
             assertThat(attempts).isEqualTo(2)
+            assertThat(captions).containsExactly(A_CAPTION, A_CAPTION)
             assertThat(done).isEqualTo(1)
         }
     }

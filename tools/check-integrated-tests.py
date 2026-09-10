@@ -10,7 +10,7 @@ spec.loader.exec_module(gate)
 gate.MODULES += ["libraries/matrix/impl", "features/home/impl", "appnav", "features/location/impl", "features/poll/impl"]
 gate.REQUIRED |= {"ThreadsViewTest", "ThreadDirectoryCoordinatorTest", "ThreadTimelineLoaderTest",
                   "ConfirmedThreadSendsTest", "FileRecentThreadsTest", "ExplicitThreadReadReducerTest", "ReasoningSwipeSelectionTest"}
-gate.REQUIRED |= {"TargetOwnedComposerModeTest", "MessageComposerContextTest", "DefaultMediaSenderOwnershipTest", "DefaultMessageDraftNavigationGateTest", "RootFlowNodeTest"}
+gate.REQUIRED |= {"TargetOwnedComposerModeTest", "MessageComposerContextTest", "DefaultMediaSenderOwnershipTest", "DefaultMessageDraftNavigationGateTest", "RootFlowNodeTest", "AttachmentsPreviewNodeNavigationTest"}
 gate.INHERITED_SKIPS.update({
     "StateEventTypeTest": {"mapping Rust type should work"},
     "MessageEventTypeKtTest": {"map Rust type should result to correct Kotlin type"},

@@ -1063,6 +1063,19 @@
       "status": "M"
     },
     {
+      "path": "features/messages/impl/src/test/kotlin/io/element/android/features/messages/impl/attachments/AttachmentsPreviewNodeNavigationTest.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-ownership",
+        "voice-state-safety"
+      ],
+      "role": "validation",
+      "status": "A"
+    },
+    {
       "path": "features/messages/impl/src/test/kotlin/io/element/android/features/messages/impl/attachments/AttachmentsPreviewPresenterTest.kt",
       "requirements": [
         "EC-001"
@@ -2912,6 +2925,18 @@
         "composer-routing"
       ],
       "role": "implementation"
+    },
+    {
+      "path": "features/messages/impl/src/test/kotlin/io/element/android/features/messages/impl/attachments/AttachmentsPreviewNodeNavigationTest.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-ownership",
+        "voice-state-safety"
+      ],
+      "role": "validation"
     }
   ]
 }

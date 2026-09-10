@@ -4,11 +4,11 @@
  */
 package io.element.android.features.messages.impl
 
+import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import io.element.android.features.messages.api.MessageDraftNavigationGate
-import io.element.android.libraries.di.AppScope
 
 /** Registrations follow actual view ownership; newest visible child wins over its parent. */
 @SingleIn(AppScope::class)

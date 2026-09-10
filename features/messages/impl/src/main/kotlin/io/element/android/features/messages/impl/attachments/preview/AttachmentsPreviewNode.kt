@@ -66,7 +66,10 @@ class AttachmentsPreviewNode(
         val navigate = pendingExternalNavigation
         pendingExternalNavigation = null
         discardRequested = false
-        if (navigate != null) navigate() else navigateUp()
+        // Retire this preview before the continuation can push a destination (or do nothing).
+        // Popping afterwards could remove the new destination and leave this Done preview reachable.
+        navigateUp()
+        navigate?.invoke()
     }
 
     private val presenter = presenterFactory.create(
