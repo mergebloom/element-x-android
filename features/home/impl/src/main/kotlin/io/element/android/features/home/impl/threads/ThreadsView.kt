@@ -5,9 +5,11 @@
 
 package io.element.android.features.home.impl.threads
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -60,7 +62,7 @@ fun ThreadsView(
     unreadScroll: LazyListState = rememberLazyListState(),
     recentScroll: LazyListState = rememberLazyListState(),
 ) {
-    Column(modifier) {
+    Column(modifier.fillMaxSize().background(ElementTheme.colors.bgCanvasDefault)) {
         TabRow(selectedTabIndex = if (state.recentSelected) 1 else 0) {
             Tab(selected = !state.recentSelected, onClick = { onSelectRecent(false) }, text = { Text(stringResource(R.string.screen_threads_unread)) })
             Tab(selected = state.recentSelected, onClick = { onSelectRecent(true) }, text = { Text(stringResource(R.string.screen_threads_recent)) })

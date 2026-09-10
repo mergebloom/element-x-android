@@ -26,7 +26,7 @@
     <string name="screen_threads_last_messaged">Last messaged</string>
     <string name="screen_threads_last_opened">Last opened</string>
     <string name="screen_threads_loading">Finding threads and checking read receipts…</string>
-    <string name="screen_threads_partial">Some threads could not be fully checked. Unknown threads are shown below. Refresh to try again.</string>
+    <string name="screen_threads_partial">Some threads are not fully checked yet.</string>
     <string name="screen_threads_checked">Threads checked at the last refresh</string>
     <string name="screen_threads_stale">Offline or waiting for sync. Showing previously loaded threads; read states may have changed.</string>
     <string name="screen_threads_error">Threads could not be loaded. Check your connection and try again.</string>
@@ -37,10 +37,10 @@
     <string name="screen_threads_preview_unavailable">Thread preview unavailable</string>
     <string name="screen_threads_saved_room">Saved thread</string>
     <string name="screen_threads_unavailable">Thread unavailable</string>
-    <string name="screen_threads_unavailable_description">This thread could not be opened. You can try opening its room instead.</string>
+    <string name="screen_threads_unavailable_description">This thread is unavailable or could not be loaded.</string>
     <string name="screen_threads_open_room">Open room</string>
     <string name="screen_threads_close">Close</string>
     <string name="screen_threads_more">Check further back (uses more memory)</string>
     <string name="screen_threads_read">Read at last check</string>
-    <string name="screen_threads_clear_failed">History could not be cleared. Nothing was removed from this list. Try again.</string>
+    <string name="screen_threads_clear_failed">Could not finish clearing history. Try again.</string>
 </resources>
