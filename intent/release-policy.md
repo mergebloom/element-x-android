@@ -1,34 +1,55 @@
-# Review-only Android update channel plan
+# Integrated validation-prerelease policy
 
-No release is published by the build workflow. Artifacts use the existing tracked
-Android Debug certificate and `io.element.android.x.debug`; this is not an
-exclusive production signing key. Never silently replace it or the application ID.
+This contract and its validators never publish. Preserve `io.element.android.x.debug`
+and the established tracked Android Debug signing certificate. That shared debug
+identity supports a validation prerelease, not an exclusive production signing key.
 
-For this integrated build:
+`reasoning-26.09.1-r1-debug` is the **previous** delivered release used for comparison,
+not the candidate tag. Do not reuse it, replace its assets or make the new prerelease
+Latest. The release owner selects a new immutable tag and APK filenames after review;
+this document deliberately does not invent a future commit, version or hash.
 
-- Candidate immutable tag: `reasoning-26.09.1-r1-debug`.
-- Primary filename: `elementx-reasoning-26.09.1-r1-arm64-v8a-debug.apk`.
-- Optional fallback: `elementx-reasoning-26.09.1-r1-universal-debug.apk`.
-- Minimum base version code: `20260902`. Upstream ABI suffixes produce `202609022`
-  for arm64 and `202609020` for universal; both exceed previous arm64 `202608002`.
-- Version name: upstream `26.09.1` plus `-reasoning.1`.
-- Publish a checksummed `release-manifest.json` binding full Git commit, upstream
-  cutoff, APK filename/hash/size, package, certificate SHA-256, ABI, versions,
-  build type, source revision embedded in the APK and exact verification status.
-- Tag exactly the reviewed build commit. Do not reassign a tag or replace an asset.
-  Corrections need a new tag, filename and greater embedded versionCode.
-- Do not add assets to the obsolete `hermes-directional-v1` release.
+## Candidate review gate
 
-Obtainium configuration after explicit release approval:
+`validate_evidence.py --candidate` checks exact frozen source/spec and positive
+registered candidate checks. Build and inspect the actual APK: package, versionName,
+strictly greater versionCode versus previous same-ABI APK, ARM64 contents, embedded
+revision, apksigner certificate, size and SHA-256. Source configuration alone is not
+metadata/signature evidence. Preserve the previous APK comparison receipt.
 
-- Source: `https://github.com/mergebloom/element-x-android`.
-- Select tags matching `^reasoning-.*-debug$`.
-- Select APK assets matching `^elementx-reasoning-.*-arm64-v8a-debug\.apk$`.
-- Do not select the universal and arm64 APK simultaneously or infer source revision
-  from a release label. Verify one matching APK per tag and monotonically increasing
-  versionCode. Universal is a manual fallback, not a second primary asset.
+Collect combined regressions and production Compose UI images at that same commit,
+isolated native Matrix thread fixtures and actual APK emulator install/launch smoke.
+An explicit blocked backend/media/physical-device/in-place-upgrade layer does not
+become passed merely because the candidate gate permits independent prerelease review.
+Read `candidate_ready`, `release_qualified` and both blocker lists separately.
 
-Review gates still include an authorized installation/update and separate backend
-room/thread reasoning canary. Local Compose and presenter tests do not establish
-those layers. No user-device/account operations or Matrix messages are performed by
-this workflow. The local evidence manifest states actual, not planned, outcomes.
+## Independent promotion and delivery
+
+After independent evidence/UX review and explicit promotion approval only:
+
+- Create a new immutable source-bound validation prerelease, explicitly prerelease
+  and not Latest. Keep all prior tags/assets intact; no automatic branch promotion.
+- Prefer one ARM64 APK for Obtainium; universal is a manual fallback if practical.
+- Publish a manifest binding full source/spec commits, upstream pin, file hashes,
+  APK name/hash/size, package/cert/ABI/versions, embedded revision, build command,
+  exact check outcomes and explicit untested boundaries. Never claim production signing.
+- Verify anonymous download bytes equal the inspected APK; remote API success is
+  not distribution evidence. Read back release/tag/asset identity after publication.
+- Obtainium source is `https://github.com/mergebloom/element-x-android`. Determine
+  actual tag/asset filters from the new immutable names, not obsolete placeholders.
+  Enable prereleases, select exactly one ARM64 APK, and decode/verify the import
+  configuration against the real release API and package ID. Universal must not
+  match the primary filter. A link string alone is not an update-path test.
+
+## All-layer final-release gate
+
+`--release` requires every registered check, including authorized backend reasoning
+application, native encrypted media delivery/receiver playback, physical-device UX
+and microphone checks, actual prior-to-current in-place update with data retained,
+and anonymous distribution/Obtainium verification. It is distinct from candidate
+review readiness and from human approval. Report unavailable capabilities as blocked;
+never relabel Compose/native fixtures/emulator smoke as full real-user certification.
+
+No live user-account messages, installed-user-device changes, package/key rotation,
+repository visibility change, force-push or replacement of old release assets is
+implied by a passing validator. Test accounts must be isolated disposable fixtures.

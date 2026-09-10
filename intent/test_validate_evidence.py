@@ -88,13 +88,14 @@ class EvidenceTests(unittest.TestCase):
         self.write_json(self.evidence / "inventory.json", self.inventory)
         self.data["inventory"]["sha256"] = sha(self.evidence / "inventory.json")
 
-    def check(self, release=False):
+    def check(self, release=False, candidate=False):
         self.assertTrue(SCRIPT.is_file(), "validator implementation is missing")
         spec = importlib.util.spec_from_file_location("evidence_validator", SCRIPT)
         assert spec is not None and spec.loader is not None
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        return module.validate(self.data, self.source, self.evidence, release=release)
+        options = {"candidate": True} if candidate else {}
+        return module.validate(self.data, self.source, self.evidence, release=release, **options)
 
     def rejected(self, text):
         with self.assertRaisesRegex(ValueError, text):

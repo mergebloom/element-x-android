@@ -941,6 +941,51 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
         }
     }
 
+    @Test
+    fun `gallery exposes uploading and cancel retains caption for retry`() = runTest {
+        val pending = kotlinx.coroutines.CompletableDeferred<Result<Unit>>()
+        var cancelled = 0
+        var attempts = 0
+        val handler = object : io.element.android.libraries.matrix.api.media.MediaUploadHandler {
+            override suspend fun await(): Result<Unit> = pending.await()
+            override fun cancel() {
+                cancelled++
+            }
+        }
+        val timeline = FakeTimeline().apply {
+            sendGalleryLambda = { _, _, _, _ ->
+                attempts++
+                Result.success(if (attempts == 1) handler else FakeMediaUploadHandler())
+            }
+        }
+        var done = 0
+        val presenter = createAttachmentsPreviewPresenter(
+            room = FakeJoinedRoom(liveTimeline = timeline),
+            attachments = persistentListOf(
+                aMediaAttachment(aLocalMedia(uri = Uri.parse("file:///tmp/gallery-a.jpeg"))),
+                aMediaAttachment(aLocalMedia(uri = Uri.parse("file:///tmp/gallery-b.jpeg"))),
+            ),
+            onDoneListener = { done++ },
+        )
+        presenter.test {
+            val ready = consumeItemsUntilPredicate { it.sendActionState is SendActionState.Sending.ReadyToUpload }.last()
+            ready.textEditorState.setMarkdown(A_CAPTION)
+            ready.eventSink(AttachmentsPreviewEvent.SendAttachment)
+            val uploading = consumeItemsUntilPredicate { it.sendActionState is SendActionState.Sending.Uploading }.last()
+            assertThat(presenter.blocksNavigation).isTrue()
+            uploading.eventSink(AttachmentsPreviewEvent.CancelAndDismiss)
+            assertThat(done).isEqualTo(0)
+            uploading.eventSink(AttachmentsPreviewEvent.CancelAndClearSendState)
+            val idle = consumeItemsUntilPredicate { it.sendActionState is SendActionState.Idle }.last()
+            assertThat(cancelled).isEqualTo(1)
+            assertThat(done).isEqualTo(0)
+            idle.eventSink(AttachmentsPreviewEvent.SendAttachment)
+            consumeItemsUntilPredicate { it.sendActionState is SendActionState.Done }
+            assertThat(attempts).isEqualTo(2)
+            assertThat(done).isEqualTo(1)
+        }
+    }
+
     internal fun TestScope.createAttachmentsPreviewPresenter(
         attachments: List<Attachment> = listOf(
             aMediaAttachment(

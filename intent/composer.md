@@ -1,6 +1,6 @@
 # EC-001 / EC-005 — Composer contract and implementation
 
-This supplement is the maintained composer intent, not a claim of release qualification. The integration lane merges it into the whole-product evidence registry. EX-001/EX-002 ordinary send and reasoning behavior remains required; this explicitly approves the new attachment/voice semantics permitted by EX-003.
+This supplement details the integrated `requirements.md` and `contract.json`, not a separate gate or release-qualification claim. EX-001/EX-002 reasoning and EX-003 ordinary send remain required. Approved EC-001/EC-005 bound the new attachment/voice semantics. In any conflict the integrated requirements and approved supersession in `provenance.json` take precedence.
 
 ## EC-001: Version-owned text-first captions
 
@@ -28,4 +28,4 @@ Public reference pins:
 - Signal Android: https://github.com/signalapp/Signal-Android/tree/d0bba759e87b6d360ac6af0dd064f40a1e6cadb4
 - Actual embedded rich editor: https://github.com/element-hq/matrix-rich-text-editor/tree/81735076261fc9c2be2e60a888e66cf5b603ee6f (2.42.1)
 
-`composer-implementation.json` maps every file changed by this lane to these requirements. Regression sources exercise native Compose and production presenters with named synthetic boundaries. Robolectric/host-compiled rich-editor evidence is not emulator, physical microphone, native encrypted Matrix send, receiver playback, process-death, install/update or release qualification. Those independent layers remain integration/release gates. Historical failures and exact frozen-source evidence are retained outside public source; never replace them with a plausible success record.
+`implementation-map.json` is the current complete downstream requirement/check map. `composer-implementation.json` is a retired lane-only map pointer, not an alternative inventory. Regression sources exercise native Compose and production presenters with named synthetic boundaries. Robolectric/host-compiled rich-editor evidence is not emulator, physical microphone, native encrypted Matrix send, receiver playback, process-death, install/update or release qualification. Those independent layers remain integration/release gates. Historical failures and exact frozen-source evidence are retained outside public source; never replace them with a plausible success record.

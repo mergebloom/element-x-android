@@ -1,55 +1,64 @@
-# Upstream reconciliation
+# Integrated downstream reconciliation
 
-Upstream: `https://github.com/element-hq/element-x-android.git`, branch `develop`.
-Integration cutoff: `c623105da65bedc92b5783cb690add22fe0ba6e2`.
-Previous published fork: `b16af6af6024fb2d4abb30ddfd1c458d9222d59f`.
-Historical fork base: `d3f35cb90cc14333561a39bffbb7a02fc37a76b6`.
+Upstream repository: `https://github.com/element-hq/element-x-android.git`.
+Pinned upstream cutoff: `c623105da65bedc92b5783cb690add22fe0ba6e2`.
+Reviewed pre-feature fork baseline: `ddaa1944597a95499d4240da7bc928da0ab103a0`.
+The baseline is context, **not** the inventory cutoff. No upstream refresh is in scope.
 
-The integration is a history-preserving merge, not replay of a detached helper.
-The historical maintenance experiment remains a separate local archive and is
-not an ancestor or evidence for this product update.
+## Current authority and supersession
 
-## Retained and adapted seams
+`requirements.md` and `contract.json` integrate EX-001–004 with EC-001, EC-003,
+EC-005 and EC-006. `provenance.json` records sanitized approved decision origins,
+original document SHA-256 values, preserved baseline reasoning and retired mechanisms.
+No private chats, machine paths or internal orchestration identifiers belong here.
+The earlier lane-only composer map is explicitly superseded by
+`implementation-map.json`; lane Markdown is supporting implementation detail.
 
-- EX-001: TextComposer -> ReasoningEndButton -> ReasoningSelector and
-  reasoningEffortForDrag. Retain the existing 24dp activation and angular cutoffs,
-  direction mapping and four efforts. Those numeric choices are legacy tuning,
-  not new product requirements. Extract the actual popup content for previews,
-  native Compose screenshots and label-bound checks. Use short section labels;
-  retain full accessibility action labels. Keep the callback current during a drag.
-- EX-002: MessageComposerView -> typed SendMessageWithReasoning event -> real
-  MessageComposerPresenter -> sendAfterSettingReasoning on the active Timeline.
-  Ordinary SendMessage remains a singleton. Command submission is awaited before
-  text/reply submission. Preserve reply event and mention arguments. Document that
-  Timeline success is not backend apply acknowledgement or atomic concurrency.
-- EX-003: retain upstream's editing-first end-button branch, empty-edit send
-  eligibility, Markdown IME callback, thread placeholder/state, and mention member
-  refresh. Editing and voice routes have no reasoning gesture. Presenter tests
-  cover selected normal/reply/thread/focused sends, suspended/failed commands,
-  ordinary sends after selection, edit/caption immunity and slash-command routing.
-- EX-004: preserve existing application ID and tracked debug signing identity.
-  The debug artifact is not a production-signed release. Minimum fork base code
-  is 20260902, with upstream ABI digits retained; version name adds `-reasoning.1`.
-  Advance the base code for each distributed replacement, even on the same upstream.
+- Preserve angle-based reasoning selection and circular UI: left Low, up-left
+  Medium, up High, up-right Max; same-ray invariance and ordinary tapping. Existing
+  activation/angular thresholds remain tuning, not newly invented product approval.
+- Preserve typed reasoning event -> actual composer presenter -> awaited plain
+  `/reasoning` command -> unchanged user message. Submission success is not backend
+  apply acknowledgement; no claimed atomicity or guaranteed concurrent ordering.
+- Preserve upstream editing-first eligibility, Markdown IME, mentions, reply/thread
+  state and ordinary send. EC-001/EC-005 explicitly replace the previous assumption
+  that attachment/voice semantics would remain unchanged; no reasoning metadata is
+  added to media and no selector is overlaid on recording/preview controls.
+- EC-001 routes versioned caption leases through picker/preview/navigation and
+  attempt-owned media preprocessing. Conflict/retry/remount preserve ownership.
+- EC-005 routes separate mic controls through retained recorder/preview and shared
+  navigation guard; Send is explicit, not release/cancel/permission side effect.
+- EC-003/006 route Home Threads through native directory/state/storage/send observers
+  into the exact initial thread timeline. No transient parent read, no notification
+  dependence, no optimistic enqueue-as-success, no Last opened-as-read shortcut.
+- Preserve package and tracked debug signer. The old reasoning release is a prior
+  comparison artifact, never a new candidate identity or permission to replace assets.
 
-All downstream endpoint diff files, including new tests/configuration and this
-intent layer, are mapped by generated `inventory.json` in the evidence bundle.
-The gate rejects omitted paths. Source/spec commits and hashes are sealed after
-source review, not self-referentially inserted into this committed document.
+## Mapping and source freeze
 
-## Explicit residual risks and gates
+The committed `implementation-map.json` lists every A/M/D/T endpoint path from
+upstream, including old reasoning, both whole lanes, shared merge seams, tests,
+configuration, workflows, tools and intent files. Check links are traceability;
+none mean tests have passed. Future integration workflow/helper paths are exact
+reservations and enter the map only after they actually exist. Unknown paths fail
+closed and require a reviewed mapping; there is no catch-all production glob.
 
-- Existing draft clearing occurs before send failure is known; no new retry/draft
-  restoration semantics are introduced. Command failure prevents body submission,
-  but does not establish a satisfactory recovery UX.
-- Existing attachment-caption path is retained, not newly endorsed as protocol
-  semantics. No reasoning is attached to uploaded media or voice messages.
-- Two visible events are non-atomic. Concurrent sends may interleave; a server may
-  accept a command without the bot applying it. Room/thread/session and supported
-  effort behavior require an authorized backend canary.
-- The circular display is a directional legend, not a new hit-test origin. Gesture
-  tuning and RTL/large-font/device ergonomics remain explicit review considerations.
-- Preview/Roborazzi images render actual Compose code but are not device screenshots
-  or proof of login, end-to-end messaging, installation or in-place update.
-- Only an isolated integration branch may be published for review. Promoting develop,
-  a new immutable release, live messages or user-device testing require approval.
+Before source freeze run `python3 -B intent/refresh_inventory.py --refresh`, inspect
+the map and run `--check`. Final source/spec commits and file hashes are collected
+only after the owner commits a reviewed clean tree. The external sealed inventory
+must match the map and full Git diff exactly. Do not insert a future SHA or runtime
+evidence into the committed spec: that would create self-reference or stale pins.
+
+## Evidence and promotion boundaries
+
+Historical lane failures/runs remain separate from final combined exact-SHA receipts.
+Do not relabel them as final evidence, infer execution from source, or replace a
+blocked native/runtime check with detached helper tests or rendered HTML.
+Actual Compose images are required UI evidence, but are not physical-device images.
+
+The candidate gate is bounded prerelease review readiness: all local production
+unit/presenter/Compose suites, integrated APK build/metadata, isolated native thread
+fixtures and actual APK install/launch smoke. It is not logged-in whole-feature E2E,
+full backend/physical-device/upgrade certification or human authorization to publish.
+Final-only gaps remain explicit and `--release` remains stricter. Independent review
+and explicit promotion approval still precede a new immutable validation prerelease.

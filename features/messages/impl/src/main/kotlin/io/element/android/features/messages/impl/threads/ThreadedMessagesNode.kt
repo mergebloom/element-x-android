@@ -12,6 +12,7 @@ import android.app.Activity
 import androidx.activity.compose.LocalActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,6 +30,7 @@ import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedInject
 import io.element.android.annotations.ContributesNode
 import io.element.android.compound.theme.ElementTheme
+import io.element.android.features.messages.api.MessageDraftNavigationGate
 import io.element.android.features.messages.impl.MessagesEvent
 import io.element.android.features.messages.impl.MessagesNavigator
 import io.element.android.features.messages.impl.MessagesPresenter
@@ -100,6 +102,7 @@ class ThreadedMessagesNode(
     private val appNavigationStateService: AppNavigationStateService,
     private val roomMemberModerationRenderer: RoomMemberModerationRenderer,
     private val emojiPickerRenderer: EmojiPickerRenderer,
+    private val draftNavigationGate: MessageDraftNavigationGate,
     private val threadTimelineLoader: ThreadTimelineLoader,
 ) : Node(buildContext, plugins = plugins), MessagesNavigator {
     data class Inputs(
@@ -275,6 +278,10 @@ class ThreadedMessagesNode(
 
     @Composable
     override fun View(modifier: Modifier) {
+        DisposableEffect(voiceDraftNavigationGuard) {
+            val registration = draftNavigationGate.register(voiceDraftNavigationGuard::navigate)
+            onDispose { registration.close() }
+        }
         if (unavailable) {
             AlertDialog(
                 title = stringResource(R.string.screen_thread_timeline_unavailable),

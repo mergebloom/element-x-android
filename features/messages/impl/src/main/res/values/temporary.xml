@@ -14,4 +14,5 @@
     <string name="screen_voice_leave_body">Keep it here to review and send, or discard it before leaving. Voice drafts are not saved after the app closes.</string>
     <string name="screen_voice_keep">Keep voice draft</string>
     <string name="screen_voice_discard">Discard voice draft</string>
+    <string name="screen_caption_leave_body">Keep editing this attachment, or discard it before opening the new conversation. Your message draft stays safe.</string>
 </resources>

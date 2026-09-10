@@ -100,6 +100,7 @@ class AttachmentsPreviewPresenter(
     private val sendActionState = mutableStateOf<SendActionState>(SendActionState.Idle)
     private var submitting by mutableStateOf(false)
     private var cancelling by mutableStateOf(false)
+    internal val blocksNavigation: Boolean get() = submitting || cancelling
     private val ongoingSendAttachmentJob = mutableStateOf<Job?>(null)
     private var preprocessMediaJob: Job? = null
     private var retainedCaptionEditor: io.element.android.libraries.textcomposer.model.MarkdownTextEditorState? = null
@@ -566,8 +567,8 @@ class AttachmentsPreviewPresenter(
         sendActionState: MutableState<SendActionState>,
         inReplyToEventId: EventId?,
     ) = runCatchingExceptions {
+        sendActionState.value = SendActionState.Sending.Uploading(mediaUploadInfos)
         if (mediaUploadInfos.size == 1) {
-            sendActionState.value = SendActionState.Sending.Uploading(mediaUploadInfos)
             mediaSender.sendPreProcessedMedia(
                 mediaUploadInfo = mediaUploadInfos.first(),
                 caption = caption,

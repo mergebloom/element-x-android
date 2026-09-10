@@ -42,6 +42,7 @@ import io.element.android.appnav.session.MatrixSessionCache
 import io.element.android.features.announcement.api.AnnouncementService
 import io.element.android.features.login.api.LoginParams
 import io.element.android.features.login.api.accesscontrol.AccountProviderAccessControl
+import io.element.android.features.messages.api.MessageDraftNavigationGate
 import io.element.android.features.rageshake.api.bugreport.BugReportEntryPoint
 import io.element.android.features.share.api.ShareIntentData
 import io.element.android.features.signedout.api.SignedOutEntryPoint
@@ -91,6 +92,7 @@ class RootFlowNode(
     private val signedOutEntryPoint: SignedOutEntryPoint,
     private val accountSelectEntryPoint: AccountSelectEntryPoint,
     private val intentResolver: IntentResolver,
+    private val draftNavigationGate: MessageDraftNavigationGate,
     private val oAuthActionFlow: OAuthActionFlow,
     private val featureFlagService: FeatureFlagService,
     private val announcementService: AnnouncementService,
@@ -390,6 +392,17 @@ class RootFlowNode(
 
     suspend fun handleIntent(intent: Intent) {
         val resolvedIntent = intentResolver.resolve(intent) ?: return
+        // Gate before session selection or any room-stack replacement. OAuth is a required
+        // authentication continuation, not discretionary navigation away from a draft.
+        if (resolvedIntent !is ResolvedIntent.OAuth && draftNavigationGate.intercept {
+                lifecycleScope.launch { handleResolvedIntent(intent, resolvedIntent) }
+            }) {
+                return
+            }
+        handleResolvedIntent(intent, resolvedIntent)
+    }
+
+    private suspend fun handleResolvedIntent(intent: Intent, resolvedIntent: ResolvedIntent) {
         when (resolvedIntent) {
             is ResolvedIntent.Navigation -> {
                 val openingRoomFromNotification = intent.getBooleanExtra(ROOM_OPENED_FROM_NOTIFICATION, false)

@@ -68,7 +68,7 @@ class DefaultVoiceMessageComposerPresenter(
     private val audioFocus: AudioFocus,
     mediaSenderFactory: MediaSenderFactory,
     private val player: VoiceMessageComposerPlayer,
-    private val messageComposerContext: MessageComposerContext,
+    messageComposerContext: MessageComposerContext,
     permissionsPresenterFactory: PermissionsPresenter.Factory
 ) : VoiceMessageComposerPresenter {
     @ContributesBinding(RoomScope::class)
@@ -77,6 +77,8 @@ class DefaultVoiceMessageComposerPresenter(
         override fun create(timelineMode: Timeline.Mode): DefaultVoiceMessageComposerPresenter
     }
 
+    // Use the matching text composer's owner for edit eligibility and the recording reply snapshot.
+    private val messageComposerContext = messageComposerContext.forTimeline(timelineMode)
     private val permissionsPresenter = permissionsPresenterFactory.create(Manifest.permission.RECORD_AUDIO)
     private var waitingForPermission = false
     private var recordingReplyTo: EventId? = null

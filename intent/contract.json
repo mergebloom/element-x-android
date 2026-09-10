@@ -1,55 +1,285 @@
 {
-  "schema": 1,
-  "requirements": ["EX-001", "EX-002", "EX-003", "EX-004"],
-  "layers": ["unit", "presenter", "ui", "build", "external_protocol", "release"],
+  "schema": 2,
+  "requirements": [
+    "EX-001",
+    "EX-002",
+    "EX-003",
+    "EX-004",
+    "EC-001",
+    "EC-003",
+    "EC-005",
+    "EC-006"
+  ],
+  "layers": [
+    "unit",
+    "presenter",
+    "ui",
+    "build",
+    "external_protocol",
+    "release"
+  ],
+  "upstream_commit": "c623105da65bedc92b5783cb690add22fe0ba6e2",
+  "implementation_map": "intent/implementation-map.json",
+  "provenance": "intent/provenance.json",
+  "gates": {
+    "candidate": [
+      "reasoning-angle",
+      "client-command-order",
+      "evidence-integrity",
+      "caption-ownership",
+      "voice-state-safety",
+      "thread-read-state",
+      "recent-persistence",
+      "composer-routing",
+      "caption-integration",
+      "voice-integration",
+      "thread-directory",
+      "thread-navigation",
+      "composer-geometry",
+      "caption-ui",
+      "voice-ui",
+      "threads-ui",
+      "debug-apk",
+      "native-thread-receipts",
+      "app-runtime-smoke"
+    ],
+    "release": [
+      "reasoning-angle",
+      "client-command-order",
+      "evidence-integrity",
+      "caption-ownership",
+      "voice-state-safety",
+      "thread-read-state",
+      "recent-persistence",
+      "composer-routing",
+      "caption-integration",
+      "voice-integration",
+      "thread-directory",
+      "thread-navigation",
+      "composer-geometry",
+      "caption-ui",
+      "voice-ui",
+      "threads-ui",
+      "debug-apk",
+      "native-thread-receipts",
+      "app-runtime-smoke",
+      "backend-command-application",
+      "media-native-delivery",
+      "physical-device",
+      "install-update",
+      "distribution-verification"
+    ]
+  },
   "checks": [
     {
       "id": "reasoning-angle",
       "layer": "unit",
-      "requirements": ["EX-001"],
-      "description": "Angle selection, same-ray invariance, activation and cancellation boundaries."
+      "requirements": [
+        "EX-001"
+      ],
+      "description": "Angle/ray invariance, activation, cancellation and directional mapping."
     },
     {
       "id": "client-command-order",
       "layer": "unit",
-      "requirements": ["EX-002", "EX-003"],
-      "description": "Client submission ordering, suspension/failure, unchanged body and null-effort send."
+      "requirements": [
+        "EX-002",
+        "EX-003"
+      ],
+      "description": "Await command submission, no send on suspension/failure, unchanged body and null effort."
     },
     {
       "id": "evidence-integrity",
       "layer": "unit",
-      "requirements": ["EX-001", "EX-002", "EX-003", "EX-004"],
-      "description": "Validator regression tests and negative controls; not Android behavior evidence."
+      "requirements": [
+        "EX-004"
+      ],
+      "description": "Python validator and exact inventory negative controls; NOT Android behavior."
+    },
+    {
+      "id": "caption-ownership",
+      "layer": "unit",
+      "requirements": [
+        "EC-001"
+      ],
+      "description": "Version ownership, equal-text newer revisions, conflict, formatting and attempt-owned media cleanup."
+    },
+    {
+      "id": "voice-state-safety",
+      "layer": "unit",
+      "requirements": [
+        "EC-005"
+      ],
+      "description": "Recorder startup, cancellation/focus, navigation ownership, interruption and no implicit send."
+    },
+    {
+      "id": "thread-read-state",
+      "layer": "unit",
+      "requirements": [
+        "EC-003"
+      ],
+      "description": "Explicit public/private/unthreaded receipts, native order budget, Unknown and own-event safety."
+    },
+    {
+      "id": "recent-persistence",
+      "layer": "unit",
+      "requirements": [
+        "EC-006"
+      ],
+      "description": "Account isolation, bounded durable order, replay, retention, logout and in-flight clear."
     },
     {
       "id": "composer-routing",
       "layer": "presenter",
-      "requirements": ["EX-002", "EX-003"],
-      "description": "Actual presenter send/reply/edit/draft routes and retained upstream behavior."
+      "requirements": [
+        "EX-002",
+        "EX-003"
+      ],
+      "description": "Production normal/reply/edit/thread/IME and reasoning integration regression suite."
+    },
+    {
+      "id": "caption-integration",
+      "layer": "presenter",
+      "requirements": [
+        "EC-001",
+        "EX-003"
+      ],
+      "description": "Real composer/picker/preview upload handoff, cancel/failure/retry and target ownership."
+    },
+    {
+      "id": "voice-integration",
+      "layer": "presenter",
+      "requirements": [
+        "EC-005",
+        "EX-003"
+      ],
+      "description": "Production recorder/preview sender, permission fresh activation, target retention and recovery."
+    },
+    {
+      "id": "thread-directory",
+      "layer": "presenter",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "description": "Cross-room pagination, retry, active lifecycle, coverage and confirmed native send observer."
+    },
+    {
+      "id": "thread-navigation",
+      "layer": "presenter",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "description": "Home to exact account/room/root without transient parent read; opened recorded on actual display."
     },
     {
       "id": "composer-geometry",
       "layer": "ui",
-      "requirements": ["EX-001", "EX-003"],
-      "description": "Circular nonoverlapping layout, real gestures, ordinary tap and accessibility."
+      "requirements": [
+        "EX-001",
+        "EX-003"
+      ],
+      "description": "Actual Compose reasoning gestures, ordinary send, circular labels, accessibility and large-font fit."
+    },
+    {
+      "id": "caption-ui",
+      "layer": "ui",
+      "requirements": [
+        "EC-001"
+      ],
+      "description": "Actual Compose caption, conflict, retry, rich revision/IME and single-select disclosure; light/dark/large font."
+    },
+    {
+      "id": "voice-ui",
+      "layer": "ui",
+      "requirements": [
+        "EC-005",
+        "EX-001",
+        "EX-003"
+      ],
+      "description": "Actual tap/hold/slop/dominance/cancel/lock gestures, permission, preview and reasoning exclusion; light/dark/large font."
+    },
+    {
+      "id": "threads-ui",
+      "layer": "ui",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "description": "Actual Home entry, visible tabs and selected/Back states, loading/empty/error/partial/populated/unavailable/clear; light/dark/large font."
     },
     {
       "id": "debug-apk",
       "layer": "build",
-      "requirements": ["EX-004"],
-      "description": "Real debug APK build, SHA-256, package/version metadata and signing identity."
+      "requirements": [
+        "EX-004"
+      ],
+      "description": "Frozen integrated APK build and inspected package/certificate/versionCode/ABI/revision/digests vs prior APK; debug prerelease only."
+    },
+    {
+      "id": "native-thread-receipts",
+      "layer": "external_protocol",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "description": "Pinned native Android SDK against disposable Matrix fixtures; real threaded receipts/order, pagination, own send and reopen; no live user rooms."
+    },
+    {
+      "id": "app-runtime-smoke",
+      "layer": "release",
+      "requirements": [
+        "EX-004"
+      ],
+      "description": "Install and launch the actual frozen candidate APK on isolated emulator; app liveness/crash checks, NOT logged-in feature or physical-device certification."
     },
     {
       "id": "backend-command-application",
       "layer": "external_protocol",
-      "requirements": ["EX-002"],
-      "description": "Authorized backend canary for application order, scope, rejection and supported effort."
+      "requirements": [
+        "EX-002"
+      ],
+      "description": "Authorized backend acceptance/apply-before-process, support, rejection, concurrency and room/thread/session scope; client Result is not acknowledgement."
+    },
+    {
+      "id": "media-native-delivery",
+      "layer": "external_protocol",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "description": "Native Matrix attachment caption and encrypted voice delivery, correct reply/thread, duration/waveform/MIME and receiver playback."
+    },
+    {
+      "id": "physical-device",
+      "layer": "release",
+      "requirements": [
+        "EC-005",
+        "EC-001",
+        "EC-003",
+        "EC-006",
+        "EX-001",
+        "EX-003"
+      ],
+      "description": "Physical microphone/playback, accessibility, compact/large font, lifecycle/permission/gesture and full logged-in four-feature UX review."
     },
     {
       "id": "install-update",
       "layer": "release",
-      "requirements": ["EX-004"],
-      "description": "Previous/current APK identity continuity, increasing versionCode and real in-place update."
+      "requirements": [
+        "EX-004",
+        "EC-006"
+      ],
+      "description": "Actual in-place prior-to-candidate install update with preserved app/account/local-history data; distinguish emulator and physical boundaries."
+    },
+    {
+      "id": "distribution-verification",
+      "layer": "release",
+      "requirements": [
+        "EX-004"
+      ],
+      "description": "Separately approved immutable validation prerelease; anonymous APK bytes, decoded Obtainium config, one ARM64 asset, prereleases enabled; previous assets intact."
     }
   ]
 }

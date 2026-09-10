@@ -40,7 +40,7 @@ import timber.log.Timber
 class CreatePollPresenter(
     repositoryFactory: PollRepository.Factory,
     private val analyticsService: AnalyticsService,
-    private val messageComposerContext: MessageComposerContext,
+    messageComposerContext: MessageComposerContext,
     @Assisted private val navigateUp: () -> Unit,
     @Assisted private val mode: CreatePollMode,
     @Assisted private val timelineMode: Timeline.Mode,
@@ -53,6 +53,8 @@ class CreatePollPresenter(
             mode: CreatePollMode
         ): CreatePollPresenter
     }
+
+    private val messageComposerContext = messageComposerContext.forTimeline(timelineMode)
 
     private val repository = repositoryFactory.create(timelineMode)
 

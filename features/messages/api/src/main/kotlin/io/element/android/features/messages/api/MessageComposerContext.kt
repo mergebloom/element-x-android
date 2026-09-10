@@ -8,6 +8,7 @@
 
 package io.element.android.features.messages.api
 
+import io.element.android.libraries.matrix.api.timeline.Timeline
 import io.element.android.libraries.textcomposer.model.MessageComposerMode
 
 /**
@@ -19,4 +20,13 @@ import io.element.android.libraries.textcomposer.model.MessageComposerMode
 interface MessageComposerContext {
     /** What the composer is currently doing: writing a new message, editing one, replying, or composing in a thread. */
     val composerMode: MessageComposerMode
+
+    /**
+     * Resolve the owner for a composer's main timeline (live or thread), not its temporary
+     * focused-event timeline. Matching text/voice consumers must use the same owner;
+     * another thread must not share its mutable edit/reply state. Room registries must
+     * return a stable owner for equal modes, including when resolving an existing owner.
+     * The default is for implementations that are already scoped to a single composer.
+     */
+    fun forTimeline(mode: Timeline.Mode): MessageComposerContext = this
 }

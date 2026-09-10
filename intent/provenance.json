@@ -1,0 +1,147 @@
+{
+  "schema": 2,
+  "policy": "Sanitized decision summaries only. Original review materials remain private; hashes identify bytes, not public retrieval or acceptance evidence. No transcripts, machine paths, chat/session identifiers or future source pins.",
+  "sources": [
+    {
+      "id": "approved-brief",
+      "kind": "approved-product-scope",
+      "document_label": "BRIEF.md",
+      "sha256": "e5305a68a392817e2fdfeade81befe154248010faf25cf954ff3ab7a143b79a6",
+      "public_summary": "intent/requirements.md"
+    },
+    {
+      "id": "approved-acceptance",
+      "kind": "approved-acceptance-matrix",
+      "document_label": "ACCEPTANCE.md",
+      "sha256": "a97f5930ae9918304135e0166e20d801b584529f3022030ea1b66f76a80af1e6",
+      "public_summary": "intent/requirements.md"
+    },
+    {
+      "id": "approved-decisions",
+      "kind": "approved-product-decisions",
+      "document_label": "PRODUCT-DECISIONS.md",
+      "sha256": "8d8be14912430da81d99c9ed282759aefc3ce6d26934ff28a3927aafa6e7121e",
+      "public_summary": "intent/requirements.md"
+    },
+    {
+      "id": "preserved-reasoning",
+      "kind": "maintained-baseline-invariants-not-new-approval",
+      "source_commit": "ddaa1944597a95499d4240da7bc928da0ab103a0",
+      "path": "intent/requirements.md",
+      "sha256": "c6dbc3702085093584643f41215858aea9cdf48ffa113c305d086e0d1b9313f1"
+    }
+  ],
+  "requirements": [
+    {
+      "id": "EX-001",
+      "sources": [
+        "preserved-reasoning"
+      ],
+      "status": "preserved"
+    },
+    {
+      "id": "EX-002",
+      "sources": [
+        "preserved-reasoning"
+      ],
+      "status": "preserved"
+    },
+    {
+      "id": "EX-003",
+      "sources": [
+        "preserved-reasoning"
+      ],
+      "status": "preserved"
+    },
+    {
+      "id": "EX-004",
+      "sources": [
+        "preserved-reasoning"
+      ],
+      "status": "preserved"
+    },
+    {
+      "id": "EC-001",
+      "sources": [
+        "approved-brief",
+        "approved-acceptance",
+        "approved-decisions"
+      ],
+      "status": "approved-outcome"
+    },
+    {
+      "id": "EC-003",
+      "sources": [
+        "approved-brief",
+        "approved-acceptance",
+        "approved-decisions"
+      ],
+      "status": "approved-outcome"
+    },
+    {
+      "id": "EC-005",
+      "sources": [
+        "approved-brief",
+        "approved-acceptance",
+        "approved-decisions"
+      ],
+      "status": "approved-outcome"
+    },
+    {
+      "id": "EC-006",
+      "sources": [
+        "approved-brief",
+        "approved-acceptance",
+        "approved-decisions"
+      ],
+      "status": "approved-outcome"
+    }
+  ],
+  "supersession": [
+    {
+      "prior": "EX-003 restriction against inventing attachment/voice semantics",
+      "current": [
+        "EC-001",
+        "EC-005"
+      ],
+      "decision": "Approved scoped caption ownership and explicit-preview voice replace unspecified behavior; ordinary compose/edit/reply and reasoning invariants remain."
+    },
+    {
+      "prior": "Recent-only or room-only Threads, experimental entry and notification-derived unread",
+      "current": [
+        "EC-003",
+        "EC-006"
+      ],
+      "decision": "First-class cross-room Unread/Recent; authoritative receipt state plus honest coverage; durable device-local activity is not read state."
+    },
+    {
+      "prior": "Release-to-send voice and automatic post-permission recording",
+      "current": [
+        "EC-005"
+      ],
+      "decision": "Release-to-preview; fresh activation after first permission grant; Send only from preview."
+    },
+    {
+      "prior": "Content equality as composer draft ownership",
+      "current": [
+        "EC-001"
+      ],
+      "decision": "Immutable revision lease; equal text after a new edit remains newer."
+    },
+    {
+      "prior": "composer-implementation.json and threads-requirements.md as additive integration TODOs",
+      "current": [
+        "intent/contract.json",
+        "intent/implementation-map.json"
+      ],
+      "decision": "Unified registry/map are authoritative; lane documents are implementation detail, not separate gates."
+    },
+    {
+      "prior": "reasoning-26.09.1-r1-debug as a proposed candidate",
+      "current": [
+        "EX-004"
+      ],
+      "decision": "Prior published reference only. New immutable tag/assets and greater versionCode require independent review and explicit promotion approval."
+    }
+  ]
+}

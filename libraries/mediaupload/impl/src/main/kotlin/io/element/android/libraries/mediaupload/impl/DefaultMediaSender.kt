@@ -13,6 +13,7 @@ import dev.zacsweers.metro.ContributesBinding
 import io.element.android.libraries.androidutils.hash.hash
 import io.element.android.libraries.core.extensions.flatMap
 import io.element.android.libraries.core.extensions.flatMapCatching
+import io.element.android.libraries.core.extensions.runCatchingExceptions
 import io.element.android.libraries.di.RoomScope
 import io.element.android.libraries.di.SessionScope
 import io.element.android.libraries.matrix.api.core.EventId
@@ -28,7 +29,6 @@ import io.element.android.libraries.mediaupload.api.MediaSenderFactory
 import io.element.android.libraries.mediaupload.api.MediaSenderRoomFactory
 import io.element.android.libraries.mediaupload.api.MediaUploadInfo
 import io.element.android.libraries.mediaupload.api.toGalleryItemInfo
-import kotlinx.coroutines.Job
 import timber.log.Timber
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
@@ -74,7 +74,7 @@ class DefaultMediaSender(
     private val timelineMode: Timeline.Mode,
     private val mediaOptimizationConfigProvider: MediaOptimizationConfigProvider,
 ) : MediaSender {
-    private val ongoingUploadJobs = ConcurrentHashMap<Job.Key, MediaUploadHandler>()
+    private val ongoingUploadJobs = ConcurrentHashMap<Any, MediaUploadHandler>()
     val hasOngoingMediaUploads get() = ongoingUploadJobs.isNotEmpty()
 
     override suspend fun preProcessMedia(
@@ -187,23 +187,38 @@ class DefaultMediaSender(
                 inReplyToEventId = inReplyToEventId,
             )
         }
-            .flatMapCatching { uploadHandler ->
-                ongoingUploadJobs[Job] = uploadHandler
-                uploadHandler.await()
-            }
+            .flatMap { uploadHandler -> uploadHandler.awaitUpload() }
             .handleSendResult(galleryLogId)
     }
 
     private fun Result<Unit>.handleSendResult(mediaId: String) = this
         .onFailure { error ->
-            val job = ongoingUploadJobs.remove(Job)
-            Timber.e(error, "Sending media $mediaId failed. Removing ongoing upload job. Total: ${ongoingUploadJobs.size}")
-            job?.cancel()
+            Timber.e(error, "Sending media $mediaId failed. Ongoing uploads: ${ongoingUploadJobs.size}")
         }
         .onSuccess {
-            Timber.d("Sent media $mediaId successfully. Removing ongoing upload job. Total: ${ongoingUploadJobs.size}")
-            ongoingUploadJobs.remove(Job)
+            Timber.d("Sent media $mediaId successfully. Ongoing uploads: ${ongoingUploadJobs.size}")
         }
+
+    private suspend fun MediaUploadHandler.awaitUpload(): Result<Unit> {
+        // A sender can be shared by overlapping immediate sends. Each native handler belongs to
+        // this attempt, not to the coroutine-context Job key (or to another send's result).
+        val attempt = Any()
+        ongoingUploadJobs[attempt] = this
+        var succeeded = false
+        try {
+            return runCatchingExceptions {
+                // Flatten the handler result: an upload failure is not a successful enqueue.
+                await().getOrThrow()
+            }.also { succeeded = it.isSuccess }
+        } finally {
+            try {
+                // Cancelling the Kotlin waiter does not cancel the independent native upload.
+                if (!succeeded) cancel()
+            } finally {
+                ongoingUploadJobs.remove(attempt)
+            }
+        }
+    }
 
     private suspend fun Timeline.sendMedia(
         uploadInfo: MediaUploadInfo,
@@ -260,15 +275,7 @@ class DefaultMediaSender(
             }
         }
 
-        // We handle the cancellations here manually, so we suppress the warning
-        @Suppress("RunCatchingNotAllowed")
-        return handler
-            .mapCatching { uploadHandler ->
-                Timber.d("Added ongoing upload job, total: ${ongoingUploadJobs.size + 1}")
-                ongoingUploadJobs[Job] = uploadHandler
-                // Flatten the handler Result: an upload failure is not a successful enqueue.
-                uploadHandler.await().getOrThrow()
-            }
+        return handler.flatMap { uploadHandler -> uploadHandler.awaitUpload() }
     }
 
     private suspend fun getTimeline(): Result<Timeline> {

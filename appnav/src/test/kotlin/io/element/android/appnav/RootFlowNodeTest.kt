@@ -118,11 +118,67 @@ class RootFlowNodeTest : RobolectricTest() {
         assertThat(loginEntryPointParams).isEqualTo(A_LOGIN_ENTRY_POINT_PARAMS)
     }
 
+    @Test
+    fun `discretionary resolved login waits for draft owner then executes only on acknowledgement`() = runTest {
+        var pending: (() -> Unit)? = null
+        val gate = object : io.element.android.features.messages.api.MessageDraftNavigationGate {
+            override fun register(navigate: (() -> Unit) -> Unit) = AutoCloseable { }
+            override fun intercept(navigate: () -> Unit): Boolean {
+                pending = navigate
+                return true
+            }
+        }
+        val root = createRootFlowNode(
+            loginEntryPoint = FakeLoginEntryPoint { context, _ -> node(context) {} },
+            draftNavigationGate = gate,
+        )
+        root.parentNodeTestHelper()
+        runCurrent()
+        root.handleIntent(aLoginIntent())
+        runCurrent()
+        assertThat(pending).isNotNull()
+        assertThat(root.backstack.activeElement).isEqualTo(RootFlowNode.NavTarget.NotLoggedInFlow(null))
+        // Keep drops the entire resolved operation before any navigation mutation.
+        pending = null
+        assertThat(root.backstack.activeElement).isEqualTo(RootFlowNode.NavTarget.NotLoggedInFlow(null))
+        root.handleIntent(aLoginIntent())
+        pending!!.invoke()
+        runCurrent()
+        assertThat(root.backstack.activeElement).isEqualTo(RootFlowNode.NavTarget.NotLoggedInFlow(A_LOGIN_PARAMS))
+    }
+
+    @Test
+    fun `notification room and thread destinations are gated before session selection`() = runTest {
+        val gate = io.mockk.mockk<io.element.android.features.messages.api.MessageDraftNavigationGate>()
+        io.mockk.every { gate.intercept(any()) } returns true
+        for (thread in listOf(null, io.element.android.libraries.matrix.api.core.ThreadId("$" + "thread"))) {
+            val target = io.element.android.libraries.deeplink.api.DeeplinkData.Room(
+                sessionId = io.element.android.libraries.matrix.test.A_SESSION_ID,
+                roomId = io.element.android.libraries.matrix.test.A_ROOM_ID,
+                threadId = thread,
+                eventId = null,
+            )
+            val root = createRootFlowNode(
+                loginEntryPoint = FakeLoginEntryPoint { context, _ -> node(context) {} },
+                draftNavigationGate = gate,
+                deeplinkParser = { target },
+            )
+            root.parentNodeTestHelper()
+            runCurrent()
+            root.handleIntent(Intent(Intent.ACTION_VIEW, Uri.parse("elementx://open")))
+            runCurrent()
+            assertThat(root.backstack.activeElement).isEqualTo(RootFlowNode.NavTarget.NotLoggedInFlow(null))
+        }
+        io.mockk.verify(exactly = 2) { gate.intercept(any()) }
+    }
+
     private fun aLoginIntent() = Intent(Intent.ACTION_VIEW, Uri.parse(A_LOGIN_LINK))
 
     private fun TestScope.createRootFlowNode(
         loginEntryPoint: LoginEntryPoint,
         sessionStore: SessionStore = InMemorySessionStore(),
+        draftNavigationGate: io.element.android.features.messages.api.MessageDraftNavigationGate = io.mockk.mockk(relaxed = true),
+        deeplinkParser: io.element.android.libraries.deeplink.api.DeeplinkParser = { null },
     ): RootFlowNode {
         val matrixSessionCache = MatrixSessionCache(
             authenticationService = FakeMatrixAuthenticationService(),
@@ -172,12 +228,13 @@ class RootFlowNodeTest : RobolectricTest() {
             signedOutEntryPoint = FakeSignedOutEntryPoint(),
             accountSelectEntryPoint = FakeAccountSelectEntryPoint(),
             intentResolver = IntentResolver(
-                deeplinkParser = { null },
+                deeplinkParser = deeplinkParser,
                 loginIntentResolver = FakeLoginIntentResolver { A_LOGIN_PARAMS },
                 oAuthIntentResolver = FakeOAuthIntentResolver { null },
                 permalinkParser = FakePermalinkParser(),
                 shareIntentHandler = FakeShareIntentHandler(),
             ),
+            draftNavigationGate = draftNavigationGate,
             oAuthActionFlow = FakeOAuthActionFlow(),
             featureFlagService = FakeFeatureFlagService(),
             announcementService = FakeAnnouncementService(),

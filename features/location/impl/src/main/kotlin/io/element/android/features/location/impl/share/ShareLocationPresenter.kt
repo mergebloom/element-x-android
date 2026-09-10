@@ -65,7 +65,7 @@ class ShareLocationPresenter(
     private val room: JoinedRoom,
     @Assisted private val timelineMode: Timeline.Mode,
     private val analyticsService: AnalyticsService,
-    private val messageComposerContext: MessageComposerContext,
+    messageComposerContext: MessageComposerContext,
     private val locationActions: LocationActions,
     private val buildMeta: BuildMeta,
     private val client: MatrixClient,
@@ -79,6 +79,8 @@ class ShareLocationPresenter(
     fun interface Factory {
         fun create(timelineMode: Timeline.Mode): ShareLocationPresenter
     }
+
+    private val messageComposerContext = messageComposerContext.forTimeline(timelineMode)
 
     private val permissionsPresenter = permissionsPresenterFactory.create(MapDefaults.permissions)
 

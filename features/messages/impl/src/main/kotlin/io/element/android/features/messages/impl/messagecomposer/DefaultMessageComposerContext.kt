@@ -15,11 +15,29 @@ import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.SingleIn
 import io.element.android.features.messages.api.MessageComposerContext
 import io.element.android.libraries.di.RoomScope
+import io.element.android.libraries.matrix.api.timeline.Timeline
 import io.element.android.libraries.textcomposer.model.MessageComposerMode
 
 @SingleIn(RoomScope::class)
 @ContributesBinding(RoomScope::class)
 class DefaultMessageComposerContext : MessageComposerContext {
-    override var composerMode: MessageComposerMode by mutableStateOf(MessageComposerMode.Normal)
-        internal set
+    // Keep the room-level accessor compatible with legacy live-timeline consumers.
+    // Target-aware consumers must resolve their owner once, before asynchronous work.
+    override val composerMode: MessageComposerMode
+        get() = forTimeline(Timeline.Mode.Live).composerMode
+
+    // One registry per room graph, not a new registry for every returned owner.
+    // Keep owners for the room graph lifetime so a stashed composer retains its mode.
+    private val owners = mutableMapOf<Timeline.Mode, TimelineContext>()
+
+    override fun forTimeline(mode: Timeline.Mode): TimelineContext =
+        owners.getOrPut(mode) { TimelineContext(this) }
+
+    class TimelineContext internal constructor(private val roomContext: DefaultMessageComposerContext) : MessageComposerContext {
+        override var composerMode: MessageComposerMode by mutableStateOf(MessageComposerMode.Normal)
+            internal set
+
+        // Resolving an already-scoped context must still reach the canonical owner.
+        override fun forTimeline(mode: Timeline.Mode): TimelineContext = roomContext.forTimeline(mode)
+    }
 }

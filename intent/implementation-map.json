@@ -1,0 +1,2917 @@
+{
+  "schema": 2,
+  "upstream_commit": "c623105da65bedc92b5783cb690add22fe0ba6e2",
+  "scope": "Complete downstream endpoint diff from pinned upstream; no future source SHA. Refresh exact reserved paths before final freeze. Roles/mappings are traceability, not evidence.",
+  "files": [
+    {
+      "path": ".github/workflows/composer-validation.yml",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "validation",
+      "status": "A"
+    },
+    {
+      "path": ".github/workflows/hermes-build.yml",
+      "requirements": [
+        "EX-004"
+      ],
+      "checks": [
+        "app-runtime-smoke",
+        "debug-apk",
+        "evidence-integrity"
+      ],
+      "role": "validation",
+      "status": "A"
+    },
+    {
+      "path": ".github/workflows/integrated-candidate.yml",
+      "requirements": [
+        "EX-001",
+        "EX-002",
+        "EX-003",
+        "EX-004",
+        "EC-001",
+        "EC-003",
+        "EC-005",
+        "EC-006"
+      ],
+      "checks": [
+        "reasoning-angle",
+        "client-command-order",
+        "evidence-integrity",
+        "caption-ownership",
+        "voice-state-safety",
+        "thread-read-state",
+        "recent-persistence",
+        "composer-routing",
+        "caption-integration",
+        "voice-integration",
+        "thread-directory",
+        "thread-navigation",
+        "composer-geometry",
+        "caption-ui",
+        "voice-ui",
+        "threads-ui",
+        "debug-apk",
+        "native-thread-receipts",
+        "app-runtime-smoke"
+      ],
+      "role": "validation",
+      "status": "A"
+    },
+    {
+      "path": ".github/workflows/threads-native.yml",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "validation",
+      "status": "A"
+    },
+    {
+      "path": ".github/workflows/threads-validation.yml",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "validation",
+      "status": "A"
+    },
+    {
+      "path": "app/build.gradle.kts",
+      "requirements": [
+        "EX-004"
+      ],
+      "checks": [
+        "app-runtime-smoke",
+        "debug-apk",
+        "evidence-integrity"
+      ],
+      "role": "build",
+      "status": "M"
+    },
+    {
+      "path": "appnav/src/main/kotlin/io/element/android/appnav/LoggedInFlowNode.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "appnav/src/main/kotlin/io/element/android/appnav/RootFlowNode.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "appnav/src/main/kotlin/io/element/android/appnav/room/RoomNavigationTarget.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "appnav/src/main/kotlin/io/element/android/appnav/room/joined/JoinedRoomLoadedFlowNode.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "appnav/src/test/kotlin/io/element/android/appnav/JoinedRoomLoadedFlowNodeTest.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "test",
+      "status": "M"
+    },
+    {
+      "path": "appnav/src/test/kotlin/io/element/android/appnav/RootFlowNodeTest.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-ownership",
+        "voice-state-safety"
+      ],
+      "role": "validation",
+      "status": "M"
+    },
+    {
+      "path": "features/home/api/src/main/kotlin/io/element/android/features/home/api/HomeEntryPoint.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "features/home/impl/build.gradle.kts",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "build",
+      "status": "M"
+    },
+    {
+      "path": "features/home/impl/src/main/kotlin/io/element/android/features/home/impl/HomeFlowNode.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "features/home/impl/src/main/kotlin/io/element/android/features/home/impl/HomeNavigationBarItem.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "features/home/impl/src/main/kotlin/io/element/android/features/home/impl/HomeView.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "features/home/impl/src/main/kotlin/io/element/android/features/home/impl/components/HomeTopBar.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "features/home/impl/src/main/kotlin/io/element/android/features/home/impl/threads/ThreadsRoute.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "A"
+    },
+    {
+      "path": "features/home/impl/src/main/kotlin/io/element/android/features/home/impl/threads/ThreadsView.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "A"
+    },
+    {
+      "path": "features/home/impl/src/main/res/values/temporary.xml",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "features/home/impl/src/test/kotlin/io/element/android/features/home/impl/DefaultHomeEntryPointTest.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "test",
+      "status": "M"
+    },
+    {
+      "path": "features/home/impl/src/test/kotlin/io/element/android/features/home/impl/threads/ThreadsViewTest.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "test",
+      "status": "A"
+    },
+    {
+      "path": "features/location/impl/src/main/kotlin/io/element/android/features/location/impl/share/ShareLocationPresenter.kt",
+      "requirements": [
+        "EX-003"
+      ],
+      "checks": [
+        "composer-routing"
+      ],
+      "role": "implementation",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/api/src/main/kotlin/io/element/android/features/messages/api/MessageComposerContext.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-ownership",
+        "voice-integration"
+      ],
+      "role": "implementation",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/api/src/main/kotlin/io/element/android/features/messages/api/MessageDraftNavigationGate.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-ownership",
+        "voice-state-safety"
+      ],
+      "role": "implementation",
+      "status": "A"
+    },
+    {
+      "path": "features/messages/api/src/main/kotlin/io/element/android/features/messages/api/MessagesEntryPoint.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/api/src/main/kotlin/io/element/android/features/messages/api/timeline/voicemessages/composer/VoiceMessageComposerState.kt",
+      "requirements": [
+        "EC-003",
+        "EC-005",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/build.gradle.kts",
+      "requirements": [
+        "EC-001",
+        "EC-003",
+        "EC-005",
+        "EC-006",
+        "EX-003"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "build",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/src/main/kotlin/io/element/android/features/messages/impl/DefaultMessageDraftNavigationGate.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-ownership",
+        "voice-state-safety"
+      ],
+      "role": "implementation",
+      "status": "A"
+    },
+    {
+      "path": "features/messages/impl/src/main/kotlin/io/element/android/features/messages/impl/DefaultMessagesEntryPoint.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/src/main/kotlin/io/element/android/features/messages/impl/MessagesFlowNode.kt",
+      "requirements": [
+        "EC-001",
+        "EC-003",
+        "EC-005",
+        "EC-006",
+        "EX-003"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/src/main/kotlin/io/element/android/features/messages/impl/MessagesNavigator.kt",
+      "requirements": [
+        "EC-001",
+        "EC-003",
+        "EC-005",
+        "EC-006",
+        "EX-003"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/src/main/kotlin/io/element/android/features/messages/impl/MessagesNode.kt",
+      "requirements": [
+        "EC-001",
+        "EC-003",
+        "EC-005",
+        "EC-006",
+        "EX-003"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/src/main/kotlin/io/element/android/features/messages/impl/MessagesView.kt",
+      "requirements": [
+        "EC-001",
+        "EC-003",
+        "EC-005",
+        "EC-006",
+        "EX-003"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/src/main/kotlin/io/element/android/features/messages/impl/attachments/preview/AttachmentsPreviewEvent.kt",
+      "requirements": [
+        "EC-001"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/src/main/kotlin/io/element/android/features/messages/impl/attachments/preview/AttachmentsPreviewNode.kt",
+      "requirements": [
+        "EC-001"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/src/main/kotlin/io/element/android/features/messages/impl/attachments/preview/AttachmentsPreviewPresenter.kt",
+      "requirements": [
+        "EC-001"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/src/main/kotlin/io/element/android/features/messages/impl/attachments/preview/AttachmentsPreviewState.kt",
+      "requirements": [
+        "EC-001"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/src/main/kotlin/io/element/android/features/messages/impl/attachments/preview/AttachmentsPreviewView.kt",
+      "requirements": [
+        "EC-001"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/src/main/kotlin/io/element/android/features/messages/impl/messagecomposer/AttachmentCaptionDraft.kt",
+      "requirements": [
+        "EC-001"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui"
+      ],
+      "role": "production",
+      "status": "A"
+    },
+    {
+      "path": "features/messages/impl/src/main/kotlin/io/element/android/features/messages/impl/messagecomposer/AttachmentsBottomSheet.kt",
+      "requirements": [
+        "EC-001"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/src/main/kotlin/io/element/android/features/messages/impl/messagecomposer/DefaultMessageComposerContext.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-ownership",
+        "voice-integration"
+      ],
+      "role": "implementation",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/src/main/kotlin/io/element/android/features/messages/impl/messagecomposer/MessageComposerEvent.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005",
+        "EX-002",
+        "EX-003"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/src/main/kotlin/io/element/android/features/messages/impl/messagecomposer/MessageComposerPresenter.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005",
+        "EX-002",
+        "EX-003"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/src/main/kotlin/io/element/android/features/messages/impl/messagecomposer/MessageComposerView.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005",
+        "EX-002",
+        "EX-003"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/src/main/kotlin/io/element/android/features/messages/impl/messagecomposer/ReasoningMessageFormatting.kt",
+      "requirements": [
+        "EX-002",
+        "EX-003"
+      ],
+      "checks": [
+        "caption-integration",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "voice-integration",
+        "voice-ui"
+      ],
+      "role": "production",
+      "status": "A"
+    },
+    {
+      "path": "features/messages/impl/src/main/kotlin/io/element/android/features/messages/impl/threads/ThreadTimelineLoader.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "A"
+    },
+    {
+      "path": "features/messages/impl/src/main/kotlin/io/element/android/features/messages/impl/threads/ThreadedMessagesNode.kt",
+      "requirements": [
+        "EC-001",
+        "EC-003",
+        "EC-005",
+        "EC-006",
+        "EX-003"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/src/main/kotlin/io/element/android/features/messages/impl/timeline/TimelineController.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/src/main/kotlin/io/element/android/features/messages/impl/timeline/TimelinePresenter.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/src/main/kotlin/io/element/android/features/messages/impl/voicemessages/composer/DefaultVoiceMessageComposerPresenter.kt",
+      "requirements": [
+        "EC-005"
+      ],
+      "checks": [
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/src/main/kotlin/io/element/android/features/messages/impl/voicemessages/composer/VoiceDraftNavigationGuard.kt",
+      "requirements": [
+        "EC-005"
+      ],
+      "checks": [
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "production",
+      "status": "A"
+    },
+    {
+      "path": "features/messages/impl/src/main/res/values/temporary.xml",
+      "requirements": [
+        "EC-001",
+        "EC-003",
+        "EC-005",
+        "EC-006",
+        "EX-003"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "production",
+      "status": "A"
+    },
+    {
+      "path": "features/messages/impl/src/test/kotlin/io/element/android/features/messages/impl/DefaultMessageDraftNavigationGateTest.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-ownership",
+        "voice-state-safety"
+      ],
+      "role": "validation",
+      "status": "A"
+    },
+    {
+      "path": "features/messages/impl/src/test/kotlin/io/element/android/features/messages/impl/DefaultMessagesEntryPointTest.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "test",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/src/test/kotlin/io/element/android/features/messages/impl/FakeMessagesNavigator.kt",
+      "requirements": [
+        "EC-001",
+        "EC-003",
+        "EC-005",
+        "EC-006",
+        "EX-003"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "test",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/src/test/kotlin/io/element/android/features/messages/impl/MessagesVoiceNavigationTest.kt",
+      "requirements": [
+        "EC-005"
+      ],
+      "checks": [
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "test",
+      "status": "A"
+    },
+    {
+      "path": "features/messages/impl/src/test/kotlin/io/element/android/features/messages/impl/actionlist/ActionListPresenterTest.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "test",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/src/test/kotlin/io/element/android/features/messages/impl/attachments/AttachmentsPreviewPresenterTest.kt",
+      "requirements": [
+        "EC-001"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui"
+      ],
+      "role": "test",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/src/test/kotlin/io/element/android/features/messages/impl/attachments/preview/CaptionPreviewUiTest.kt",
+      "requirements": [
+        "EC-001"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui"
+      ],
+      "role": "test",
+      "status": "A"
+    },
+    {
+      "path": "features/messages/impl/src/test/kotlin/io/element/android/features/messages/impl/messagecomposer/CaptionComposerRemountTest.kt",
+      "requirements": [
+        "EC-001"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui"
+      ],
+      "role": "test",
+      "status": "A"
+    },
+    {
+      "path": "features/messages/impl/src/test/kotlin/io/element/android/features/messages/impl/messagecomposer/CaptionHandoffIntegrationTest.kt",
+      "requirements": [
+        "EC-001"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui"
+      ],
+      "role": "test",
+      "status": "A"
+    },
+    {
+      "path": "features/messages/impl/src/test/kotlin/io/element/android/features/messages/impl/messagecomposer/MessageComposerContextTest.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-ownership",
+        "voice-integration"
+      ],
+      "role": "validation",
+      "status": "A"
+    },
+    {
+      "path": "features/messages/impl/src/test/kotlin/io/element/android/features/messages/impl/messagecomposer/MessageComposerPresenterTest.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005",
+        "EX-002",
+        "EX-003"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "test",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/src/test/kotlin/io/element/android/features/messages/impl/messagecomposer/ReasoningMessageFormattingTest.kt",
+      "requirements": [
+        "EX-002",
+        "EX-003"
+      ],
+      "checks": [
+        "caption-integration",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "voice-integration",
+        "voice-ui"
+      ],
+      "role": "test",
+      "status": "A"
+    },
+    {
+      "path": "features/messages/impl/src/test/kotlin/io/element/android/features/messages/impl/messagecomposer/RichCaptionRevisionUiTest.kt",
+      "requirements": [
+        "EC-001"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui"
+      ],
+      "role": "test",
+      "status": "A"
+    },
+    {
+      "path": "features/messages/impl/src/test/kotlin/io/element/android/features/messages/impl/messagecomposer/TargetOwnedComposerModeTest.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-ownership",
+        "voice-integration"
+      ],
+      "role": "validation",
+      "status": "A"
+    },
+    {
+      "path": "features/messages/impl/src/test/kotlin/io/element/android/features/messages/impl/threads/ThreadTimelineLoaderTest.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "test",
+      "status": "A"
+    },
+    {
+      "path": "features/messages/impl/src/test/kotlin/io/element/android/features/messages/impl/timeline/TimelinePresenterTest.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "test",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/src/test/kotlin/io/element/android/features/messages/impl/voicemessages/composer/DefaultVoiceMessageComposerPresenterTest.kt",
+      "requirements": [
+        "EC-005"
+      ],
+      "checks": [
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "test",
+      "status": "M"
+    },
+    {
+      "path": "features/messages/impl/src/test/kotlin/io/element/android/features/messages/impl/voicemessages/composer/RetainedVoiceMessageComposerPresenterTest.kt",
+      "requirements": [
+        "EC-005"
+      ],
+      "checks": [
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "test",
+      "status": "A"
+    },
+    {
+      "path": "features/messages/impl/src/test/kotlin/io/element/android/features/messages/impl/voicemessages/composer/VoiceDraftNavigationGuardTest.kt",
+      "requirements": [
+        "EC-005"
+      ],
+      "checks": [
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "test",
+      "status": "A"
+    },
+    {
+      "path": "features/poll/impl/src/main/kotlin/io/element/android/features/poll/impl/create/CreatePollPresenter.kt",
+      "requirements": [
+        "EX-003"
+      ],
+      "checks": [
+        "composer-routing"
+      ],
+      "role": "implementation",
+      "status": "M"
+    },
+    {
+      "path": "intent/README.md",
+      "requirements": [
+        "EC-001",
+        "EC-003",
+        "EC-005",
+        "EC-006",
+        "EX-001",
+        "EX-002",
+        "EX-003",
+        "EX-004"
+      ],
+      "checks": [
+        "app-runtime-smoke",
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "debug-apk",
+        "evidence-integrity",
+        "native-thread-receipts",
+        "reasoning-angle",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "contract",
+      "status": "A"
+    },
+    {
+      "path": "intent/composer-implementation.json",
+      "requirements": [
+        "EC-001",
+        "EC-003",
+        "EC-005",
+        "EC-006",
+        "EX-001",
+        "EX-002",
+        "EX-003",
+        "EX-004"
+      ],
+      "checks": [
+        "app-runtime-smoke",
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "debug-apk",
+        "evidence-integrity",
+        "native-thread-receipts",
+        "reasoning-angle",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "contract",
+      "status": "A"
+    },
+    {
+      "path": "intent/composer.md",
+      "requirements": [
+        "EC-001",
+        "EC-003",
+        "EC-005",
+        "EC-006",
+        "EX-001",
+        "EX-002",
+        "EX-003",
+        "EX-004"
+      ],
+      "checks": [
+        "app-runtime-smoke",
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "debug-apk",
+        "evidence-integrity",
+        "native-thread-receipts",
+        "reasoning-angle",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "contract",
+      "status": "A"
+    },
+    {
+      "path": "intent/contract.json",
+      "requirements": [
+        "EC-001",
+        "EC-003",
+        "EC-005",
+        "EC-006",
+        "EX-001",
+        "EX-002",
+        "EX-003",
+        "EX-004"
+      ],
+      "checks": [
+        "app-runtime-smoke",
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "debug-apk",
+        "evidence-integrity",
+        "native-thread-receipts",
+        "reasoning-angle",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "contract",
+      "status": "A"
+    },
+    {
+      "path": "intent/implementation-map.json",
+      "requirements": [
+        "EC-001",
+        "EC-003",
+        "EC-005",
+        "EC-006",
+        "EX-001",
+        "EX-002",
+        "EX-003",
+        "EX-004"
+      ],
+      "checks": [
+        "app-runtime-smoke",
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "debug-apk",
+        "evidence-integrity",
+        "native-thread-receipts",
+        "reasoning-angle",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "contract",
+      "status": "A"
+    },
+    {
+      "path": "intent/provenance.json",
+      "requirements": [
+        "EC-001",
+        "EC-003",
+        "EC-005",
+        "EC-006",
+        "EX-001",
+        "EX-002",
+        "EX-003",
+        "EX-004"
+      ],
+      "checks": [
+        "app-runtime-smoke",
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "debug-apk",
+        "evidence-integrity",
+        "native-thread-receipts",
+        "reasoning-angle",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "contract",
+      "status": "A"
+    },
+    {
+      "path": "intent/reconciliation.md",
+      "requirements": [
+        "EC-001",
+        "EC-003",
+        "EC-005",
+        "EC-006",
+        "EX-001",
+        "EX-002",
+        "EX-003",
+        "EX-004"
+      ],
+      "checks": [
+        "app-runtime-smoke",
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "debug-apk",
+        "evidence-integrity",
+        "native-thread-receipts",
+        "reasoning-angle",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "contract",
+      "status": "A"
+    },
+    {
+      "path": "intent/refresh_inventory.py",
+      "requirements": [
+        "EX-004"
+      ],
+      "checks": [
+        "evidence-integrity"
+      ],
+      "role": "validation",
+      "status": "A"
+    },
+    {
+      "path": "intent/release-policy.md",
+      "requirements": [
+        "EC-001",
+        "EC-003",
+        "EC-005",
+        "EC-006",
+        "EX-001",
+        "EX-002",
+        "EX-003",
+        "EX-004"
+      ],
+      "checks": [
+        "app-runtime-smoke",
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "debug-apk",
+        "evidence-integrity",
+        "native-thread-receipts",
+        "reasoning-angle",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "contract",
+      "status": "A"
+    },
+    {
+      "path": "intent/requirements.md",
+      "requirements": [
+        "EC-001",
+        "EC-003",
+        "EC-005",
+        "EC-006",
+        "EX-001",
+        "EX-002",
+        "EX-003",
+        "EX-004"
+      ],
+      "checks": [
+        "app-runtime-smoke",
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "debug-apk",
+        "evidence-integrity",
+        "native-thread-receipts",
+        "reasoning-angle",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "contract",
+      "status": "A"
+    },
+    {
+      "path": "intent/test_integrated_evidence.py",
+      "requirements": [
+        "EX-004"
+      ],
+      "checks": [
+        "evidence-integrity"
+      ],
+      "role": "validation",
+      "status": "A"
+    },
+    {
+      "path": "intent/test_validate_evidence.py",
+      "requirements": [
+        "EX-004"
+      ],
+      "checks": [
+        "evidence-integrity"
+      ],
+      "role": "validation",
+      "status": "A"
+    },
+    {
+      "path": "intent/threads-requirements.md",
+      "requirements": [
+        "EC-001",
+        "EC-003",
+        "EC-005",
+        "EC-006",
+        "EX-001",
+        "EX-002",
+        "EX-003",
+        "EX-004"
+      ],
+      "checks": [
+        "app-runtime-smoke",
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "debug-apk",
+        "evidence-integrity",
+        "native-thread-receipts",
+        "reasoning-angle",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "contract",
+      "status": "A"
+    },
+    {
+      "path": "intent/validate_evidence.py",
+      "requirements": [
+        "EX-004"
+      ],
+      "checks": [
+        "evidence-integrity"
+      ],
+      "role": "validation",
+      "status": "A"
+    },
+    {
+      "path": "libraries/audio/impl/src/main/kotlin/io/element/android/libraries/audio/impl/DefaultAudioFocus.kt",
+      "requirements": [
+        "EC-005"
+      ],
+      "checks": [
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "libraries/audio/impl/src/test/kotlin/io/element/android/libraries/audio/impl/DefaultAudioFocusTest.kt",
+      "requirements": [
+        "EC-005"
+      ],
+      "checks": [
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "test",
+      "status": "M"
+    },
+    {
+      "path": "libraries/featureflag/api/src/main/kotlin/io/element/android/libraries/featureflag/api/FeatureFlags.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "libraries/matrix/api/src/main/kotlin/io/element/android/libraries/matrix/api/MatrixClient.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "libraries/matrix/api/src/main/kotlin/io/element/android/libraries/matrix/api/threads/ThreadDirectory.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "A"
+    },
+    {
+      "path": "libraries/matrix/impl/build.gradle.kts",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "build",
+      "status": "M"
+    },
+    {
+      "path": "libraries/matrix/impl/src/androidTest/AndroidManifest.xml",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "test",
+      "status": "A"
+    },
+    {
+      "path": "libraries/matrix/impl/src/androidTest/kotlin/io/element/android/libraries/matrix/impl/threads/NativeThreadFixture.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "test",
+      "status": "A"
+    },
+    {
+      "path": "libraries/matrix/impl/src/androidTest/kotlin/io/element/android/libraries/matrix/impl/threads/NativeThreadReceiptTest.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "test",
+      "status": "A"
+    },
+    {
+      "path": "libraries/matrix/impl/src/androidTest/res/xml/threads_fixture_network_security.xml",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "test",
+      "status": "A"
+    },
+    {
+      "path": "libraries/matrix/impl/src/main/kotlin/io/element/android/libraries/matrix/impl/RustMatrixClient.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "libraries/matrix/impl/src/main/kotlin/io/element/android/libraries/matrix/impl/threads/ConfirmedThreadSends.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "A"
+    },
+    {
+      "path": "libraries/matrix/impl/src/main/kotlin/io/element/android/libraries/matrix/impl/threads/ExplicitThreadReadReducer.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "A"
+    },
+    {
+      "path": "libraries/matrix/impl/src/main/kotlin/io/element/android/libraries/matrix/impl/threads/FileRecentThreads.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "A"
+    },
+    {
+      "path": "libraries/matrix/impl/src/main/kotlin/io/element/android/libraries/matrix/impl/threads/NativeOrderedTimeline.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "A"
+    },
+    {
+      "path": "libraries/matrix/impl/src/main/kotlin/io/element/android/libraries/matrix/impl/threads/PendingThreadSends.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "A"
+    },
+    {
+      "path": "libraries/matrix/impl/src/main/kotlin/io/element/android/libraries/matrix/impl/threads/RustThreadDirectorySource.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "A"
+    },
+    {
+      "path": "libraries/matrix/impl/src/main/kotlin/io/element/android/libraries/matrix/impl/threads/ThreadDirectoryCoordinator.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "production",
+      "status": "A"
+    },
+    {
+      "path": "libraries/matrix/impl/src/test/kotlin/io/element/android/libraries/matrix/impl/fixtures/fakes/FakeFfiClient.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "test",
+      "status": "M"
+    },
+    {
+      "path": "libraries/matrix/impl/src/test/kotlin/io/element/android/libraries/matrix/impl/threads/ConfirmedThreadSendsTest.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "test",
+      "status": "A"
+    },
+    {
+      "path": "libraries/matrix/impl/src/test/kotlin/io/element/android/libraries/matrix/impl/threads/ExplicitThreadReadReducerTest.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "test",
+      "status": "A"
+    },
+    {
+      "path": "libraries/matrix/impl/src/test/kotlin/io/element/android/libraries/matrix/impl/threads/FileRecentThreadsTest.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "test",
+      "status": "A"
+    },
+    {
+      "path": "libraries/matrix/impl/src/test/kotlin/io/element/android/libraries/matrix/impl/threads/PendingThreadSendsTest.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "test",
+      "status": "A"
+    },
+    {
+      "path": "libraries/matrix/impl/src/test/kotlin/io/element/android/libraries/matrix/impl/threads/ThreadDirectoryCoordinatorTest.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "test",
+      "status": "A"
+    },
+    {
+      "path": "libraries/matrix/test/src/main/kotlin/io/element/android/libraries/matrix/test/FakeMatrixClient.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "test",
+      "status": "M"
+    },
+    {
+      "path": "libraries/matrix/test/src/main/kotlin/io/element/android/libraries/matrix/test/media/FakeMediaUploadHandler.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "test",
+      "status": "M"
+    },
+    {
+      "path": "libraries/matrix/test/src/main/kotlin/io/element/android/libraries/matrix/test/threads/FakeThreadServices.kt",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "test",
+      "status": "A"
+    },
+    {
+      "path": "libraries/mediaupload/api/src/main/kotlin/io/element/android/libraries/mediaupload/api/MediaPreProcessor.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "libraries/mediaupload/impl/src/main/kotlin/io/element/android/libraries/mediaupload/impl/AndroidMediaPreProcessor.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "libraries/mediaupload/impl/src/main/kotlin/io/element/android/libraries/mediaupload/impl/DefaultMediaSender.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "libraries/mediaupload/impl/src/main/kotlin/io/element/android/libraries/mediaupload/impl/VideoCompressor.kt",
+      "requirements": [
+        "EC-001"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "libraries/mediaupload/impl/src/test/kotlin/io/element/android/libraries/mediaupload/impl/AndroidMediaPreProcessorTest.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "test",
+      "status": "M"
+    },
+    {
+      "path": "libraries/mediaupload/impl/src/test/kotlin/io/element/android/libraries/mediaupload/impl/DefaultMediaSenderOwnershipTest.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-integration",
+        "voice-integration"
+      ],
+      "role": "validation",
+      "status": "A"
+    },
+    {
+      "path": "libraries/mediaupload/impl/src/test/kotlin/io/element/android/libraries/mediaupload/impl/VideoCompressorCancellationTest.kt",
+      "requirements": [
+        "EC-001"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui"
+      ],
+      "role": "test",
+      "status": "A"
+    },
+    {
+      "path": "libraries/mediaupload/test/src/main/kotlin/io/element/android/libraries/mediaupload/test/FakeMediaPreProcessor.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "test",
+      "status": "M"
+    },
+    {
+      "path": "libraries/textcomposer/impl/build.gradle.kts",
+      "requirements": [
+        "EC-001",
+        "EC-005",
+        "EX-001",
+        "EX-003"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "reasoning-angle",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "build",
+      "status": "M"
+    },
+    {
+      "path": "libraries/textcomposer/impl/src/main/kotlin/io/element/android/libraries/textcomposer/ReasoningSelector.kt",
+      "requirements": [
+        "EX-001",
+        "EX-003"
+      ],
+      "checks": [
+        "caption-integration",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "reasoning-angle",
+        "voice-integration",
+        "voice-ui"
+      ],
+      "role": "production",
+      "status": "A"
+    },
+    {
+      "path": "libraries/textcomposer/impl/src/main/kotlin/io/element/android/libraries/textcomposer/ReasoningSwipeSelection.kt",
+      "requirements": [
+        "EX-001",
+        "EX-003"
+      ],
+      "checks": [
+        "caption-integration",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "reasoning-angle",
+        "voice-integration",
+        "voice-ui"
+      ],
+      "role": "production",
+      "status": "A"
+    },
+    {
+      "path": "libraries/textcomposer/impl/src/main/kotlin/io/element/android/libraries/textcomposer/TextComposer.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005",
+        "EX-001",
+        "EX-003"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "reasoning-angle",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "libraries/textcomposer/impl/src/main/kotlin/io/element/android/libraries/textcomposer/VoiceRecordingControls.kt",
+      "requirements": [
+        "EC-005"
+      ],
+      "checks": [
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "production",
+      "status": "A"
+    },
+    {
+      "path": "libraries/textcomposer/impl/src/main/kotlin/io/element/android/libraries/textcomposer/components/VoiceMessagePreview.kt",
+      "requirements": [
+        "EC-005"
+      ],
+      "checks": [
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "libraries/textcomposer/impl/src/main/kotlin/io/element/android/libraries/textcomposer/components/markdown/StableCharSequence.kt",
+      "requirements": [
+        "EC-001"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "libraries/textcomposer/impl/src/main/kotlin/io/element/android/libraries/textcomposer/model/ReasoningEffort.kt",
+      "requirements": [
+        "EX-001",
+        "EX-003"
+      ],
+      "checks": [
+        "caption-integration",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "reasoning-angle",
+        "voice-integration",
+        "voice-ui"
+      ],
+      "role": "production",
+      "status": "A"
+    },
+    {
+      "path": "libraries/textcomposer/impl/src/main/res/values/temporary.xml",
+      "requirements": [
+        "EC-001",
+        "EC-005",
+        "EX-001",
+        "EX-003"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "reasoning-angle",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "production",
+      "status": "A"
+    },
+    {
+      "path": "libraries/textcomposer/impl/src/test/kotlin/io/element/android/libraries/textcomposer/ReasoningComposerUiTest.kt",
+      "requirements": [
+        "EX-001",
+        "EX-003"
+      ],
+      "checks": [
+        "caption-integration",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "reasoning-angle",
+        "voice-integration",
+        "voice-ui"
+      ],
+      "role": "test",
+      "status": "A"
+    },
+    {
+      "path": "libraries/textcomposer/impl/src/test/kotlin/io/element/android/libraries/textcomposer/ReasoningSwipeSelectionTest.kt",
+      "requirements": [
+        "EX-001",
+        "EX-003"
+      ],
+      "checks": [
+        "caption-integration",
+        "client-command-order",
+        "composer-geometry",
+        "composer-routing",
+        "reasoning-angle",
+        "voice-integration",
+        "voice-ui"
+      ],
+      "role": "test",
+      "status": "A"
+    },
+    {
+      "path": "libraries/textcomposer/impl/src/test/kotlin/io/element/android/libraries/textcomposer/VoiceComposerUiTest.kt",
+      "requirements": [
+        "EC-005"
+      ],
+      "checks": [
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "test",
+      "status": "A"
+    },
+    {
+      "path": "libraries/voicerecorder/api/src/main/kotlin/io/element/android/libraries/voicerecorder/api/VoiceRecorderState.kt",
+      "requirements": [
+        "EC-005"
+      ],
+      "checks": [
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "libraries/voicerecorder/impl/src/main/kotlin/io/element/android/libraries/voicerecorder/impl/DefaultVoiceRecorder.kt",
+      "requirements": [
+        "EC-005"
+      ],
+      "checks": [
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "production",
+      "status": "M"
+    },
+    {
+      "path": "libraries/voicerecorder/impl/src/test/kotlin/io/element/android/libraries/voicerecorder/impl/DefaultVoiceRecorderTest.kt",
+      "requirements": [
+        "EC-005"
+      ],
+      "checks": [
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "test",
+      "status": "M"
+    },
+    {
+      "path": "scripts/threads-native/README.md",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "validation",
+      "status": "A"
+    },
+    {
+      "path": "scripts/threads-native/evidence.py",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "validation",
+      "status": "A"
+    },
+    {
+      "path": "scripts/threads-native/fixture_server.py",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "validation",
+      "status": "A"
+    },
+    {
+      "path": "scripts/threads-native/run-emulator.sh",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "validation",
+      "status": "A"
+    },
+    {
+      "path": "scripts/threads-native/smoke_server.py",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "validation",
+      "status": "A"
+    },
+    {
+      "path": "scripts/threads-native/test_evidence.py",
+      "requirements": [
+        "EC-003",
+        "EC-006"
+      ],
+      "checks": [
+        "native-thread-receipts",
+        "recent-persistence",
+        "thread-directory",
+        "thread-navigation",
+        "thread-read-state",
+        "threads-ui"
+      ],
+      "role": "validation",
+      "status": "A"
+    },
+    {
+      "path": "tools/app-runtime-smoke.py",
+      "requirements": [
+        "EX-004"
+      ],
+      "checks": [
+        "app-runtime-smoke"
+      ],
+      "role": "validation",
+      "status": "A"
+    },
+    {
+      "path": "tools/candidate-apk-metadata.py",
+      "requirements": [
+        "EX-004"
+      ],
+      "checks": [
+        "debug-apk"
+      ],
+      "role": "validation",
+      "status": "A"
+    },
+    {
+      "path": "tools/check-composer-tests.py",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "validation",
+      "status": "A"
+    },
+    {
+      "path": "tools/check-integrated-tests.py",
+      "requirements": [
+        "EX-001",
+        "EX-002",
+        "EX-003",
+        "EX-004",
+        "EC-001",
+        "EC-003",
+        "EC-005",
+        "EC-006"
+      ],
+      "checks": [
+        "reasoning-angle",
+        "client-command-order",
+        "evidence-integrity",
+        "caption-ownership",
+        "voice-state-safety",
+        "thread-read-state",
+        "recent-persistence",
+        "composer-routing",
+        "caption-integration",
+        "voice-integration",
+        "thread-directory",
+        "thread-navigation",
+        "composer-geometry",
+        "caption-ui",
+        "voice-ui",
+        "threads-ui"
+      ],
+      "role": "validation",
+      "status": "A"
+    },
+    {
+      "path": "tools/composer-validation.init.gradle",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-integration",
+        "caption-ownership",
+        "caption-ui",
+        "voice-integration",
+        "voice-state-safety",
+        "voice-ui"
+      ],
+      "role": "validation",
+      "status": "A"
+    }
+  ],
+  "reserved_paths": [
+    {
+      "path": ".github/workflows/integrated-candidate.yml",
+      "requirements": [
+        "EX-001",
+        "EX-002",
+        "EX-003",
+        "EX-004",
+        "EC-001",
+        "EC-003",
+        "EC-005",
+        "EC-006"
+      ],
+      "checks": [
+        "reasoning-angle",
+        "client-command-order",
+        "evidence-integrity",
+        "caption-ownership",
+        "voice-state-safety",
+        "thread-read-state",
+        "recent-persistence",
+        "composer-routing",
+        "caption-integration",
+        "voice-integration",
+        "thread-directory",
+        "thread-navigation",
+        "composer-geometry",
+        "caption-ui",
+        "voice-ui",
+        "threads-ui",
+        "debug-apk",
+        "native-thread-receipts",
+        "app-runtime-smoke"
+      ],
+      "role": "validation"
+    },
+    {
+      "path": "tools/check-integrated-tests.py",
+      "requirements": [
+        "EX-001",
+        "EX-002",
+        "EX-003",
+        "EX-004",
+        "EC-001",
+        "EC-003",
+        "EC-005",
+        "EC-006"
+      ],
+      "checks": [
+        "reasoning-angle",
+        "client-command-order",
+        "evidence-integrity",
+        "caption-ownership",
+        "voice-state-safety",
+        "thread-read-state",
+        "recent-persistence",
+        "composer-routing",
+        "caption-integration",
+        "voice-integration",
+        "thread-directory",
+        "thread-navigation",
+        "composer-geometry",
+        "caption-ui",
+        "voice-ui",
+        "threads-ui"
+      ],
+      "role": "validation"
+    },
+    {
+      "path": "tools/candidate-apk-metadata.py",
+      "requirements": [
+        "EX-004"
+      ],
+      "checks": [
+        "debug-apk"
+      ],
+      "role": "validation"
+    },
+    {
+      "path": "tools/app-runtime-smoke.py",
+      "requirements": [
+        "EX-004"
+      ],
+      "checks": [
+        "app-runtime-smoke"
+      ],
+      "role": "validation"
+    },
+    {
+      "path": "appnav/src/test/kotlin/io/element/android/appnav/RootFlowNodeTest.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-ownership",
+        "voice-state-safety"
+      ],
+      "role": "validation"
+    },
+    {
+      "path": "features/messages/api/src/main/kotlin/io/element/android/features/messages/api/MessageComposerContext.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-ownership",
+        "voice-integration"
+      ],
+      "role": "implementation"
+    },
+    {
+      "path": "features/messages/api/src/main/kotlin/io/element/android/features/messages/api/MessageDraftNavigationGate.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-ownership",
+        "voice-state-safety"
+      ],
+      "role": "implementation"
+    },
+    {
+      "path": "features/messages/impl/src/main/kotlin/io/element/android/features/messages/impl/DefaultMessageDraftNavigationGate.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-ownership",
+        "voice-state-safety"
+      ],
+      "role": "implementation"
+    },
+    {
+      "path": "features/messages/impl/src/main/kotlin/io/element/android/features/messages/impl/messagecomposer/DefaultMessageComposerContext.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-ownership",
+        "voice-integration"
+      ],
+      "role": "implementation"
+    },
+    {
+      "path": "features/messages/impl/src/test/kotlin/io/element/android/features/messages/impl/DefaultMessageDraftNavigationGateTest.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-ownership",
+        "voice-state-safety"
+      ],
+      "role": "validation"
+    },
+    {
+      "path": "features/messages/impl/src/test/kotlin/io/element/android/features/messages/impl/messagecomposer/MessageComposerContextTest.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-ownership",
+        "voice-integration"
+      ],
+      "role": "validation"
+    },
+    {
+      "path": "features/messages/impl/src/test/kotlin/io/element/android/features/messages/impl/messagecomposer/TargetOwnedComposerModeTest.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-ownership",
+        "voice-integration"
+      ],
+      "role": "validation"
+    },
+    {
+      "path": "libraries/mediaupload/impl/src/test/kotlin/io/element/android/libraries/mediaupload/impl/DefaultMediaSenderOwnershipTest.kt",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "checks": [
+        "caption-integration",
+        "voice-integration"
+      ],
+      "role": "validation"
+    },
+    {
+      "path": "features/location/impl/src/main/kotlin/io/element/android/features/location/impl/share/ShareLocationPresenter.kt",
+      "requirements": [
+        "EX-003"
+      ],
+      "checks": [
+        "composer-routing"
+      ],
+      "role": "implementation"
+    },
+    {
+      "path": "features/poll/impl/src/main/kotlin/io/element/android/features/poll/impl/create/CreatePollPresenter.kt",
+      "requirements": [
+        "EX-003"
+      ],
+      "checks": [
+        "composer-routing"
+      ],
+      "role": "implementation"
+    }
+  ]
+}

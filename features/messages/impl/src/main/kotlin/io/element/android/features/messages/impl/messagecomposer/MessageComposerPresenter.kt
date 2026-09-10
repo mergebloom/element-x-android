@@ -131,7 +131,7 @@ class MessageComposerPresenter(
     private val snackbarDispatcher: SnackbarDispatcher,
     private val analyticsService: AnalyticsService,
     private val locationService: LocationService,
-    private val messageComposerContext: DefaultMessageComposerContext,
+    messageComposerContext: DefaultMessageComposerContext,
     private val richTextEditorStateFactory: RichTextEditorStateFactory,
     private val roomAliasSuggestionsDataSource: RoomAliasSuggestionsDataSource,
     private val permalinkParser: PermalinkParser,
@@ -158,6 +158,8 @@ class MessageComposerPresenter(
         ): MessageComposerPresenter
     }
 
+    // Bind once to the main target, including when the controller temporarily focuses an event.
+    private val messageComposerContext = messageComposerContext.forTimeline(timelineController.mainTimelineMode())
     private val isInThread = threadRoot != null
     private val mediaSender = mediaSenderFactory.create(timelineMode = timelineController.mainTimelineMode())
 

@@ -11,6 +11,7 @@ import re
 import subprocess
 
 LAYERS = ("unit", "presenter", "ui", "build", "external_protocol", "release")
+INTEGRATED_REQUIREMENTS = {"EX-001", "EX-002", "EX-003", "EX-004", "EC-001", "EC-003", "EC-005", "EC-006"}
 
 
 def require(condition, message):
@@ -100,17 +101,19 @@ def commit(value) -> str:
     return value
 
 
-def validate(data, source_root, evidence_root, release=False):
+def validate(data, source_root, evidence_root, release=False, candidate=False):
     """Return a report or raise ValueError. Roots need not share a parent."""
     try:
-        return _validate(data, Path(source_root).resolve(), Path(evidence_root).resolve(), release)
+        return _validate(data, Path(source_root).resolve(), Path(evidence_root).resolve(), release, candidate)
     except (KeyError, TypeError, OSError, UnicodeError, subprocess.SubprocessError) as error:
         raise ValueError("malformed or unreadable evidence: " + str(error)) from error
 
 
-def _validate(data, source, evidence, release):
-    require(isinstance(data, dict) and type(data.get("schema")) is int and data["schema"] == 1,
+def _validate(data, source, evidence, release, candidate):
+    require(isinstance(data, dict) and type(data.get("schema")) is int and data["schema"] in {1, 2},
             "unsupported manifest schema")
+    integrated = data["schema"] == 2
+    require(not candidate or integrated, "candidate gate requires integrated schema 2")
     head = commit(data.get("source_commit"))
     upstream = commit(data.get("upstream_commit"))
     require(Path(git(source, "rev-parse", "--show-toplevel").decode().strip()).resolve() == source,
@@ -127,9 +130,13 @@ def _validate(data, source, evidence, release):
     spec_record = data["spec"]
     spec_path = hashed_file(source, spec_record, "spec")
     spec = load_json(spec_path)
-    require(isinstance(spec, dict) and type(spec.get("schema")) is int and spec["schema"] == 1,
+    require(isinstance(spec, dict) and type(spec.get("schema")) is int and spec["schema"] == data["schema"],
             "unsupported spec schema")
     requirements = names(spec.get("requirements"), "spec requirements")
+    if integrated:
+        require(requirements == INTEGRATED_REQUIREMENTS, "incomplete integrated requirements")
+        require(commit(data.get("spec_commit")) == head, "spec commit differs from source")
+        require(commit(spec.get("upstream_commit")) == upstream, "upstream differs from integrated spec pin")
     require(names(spec.get("layers"), "spec layers") == set(LAYERS), "spec layers must be the six independent layers")
     definitions = index(spec.get("checks"), "spec checks")
     require(bool(definitions), "missing spec checks")
@@ -139,6 +146,18 @@ def _validate(data, source, evidence, release):
     require({c["layer"] for c in definitions.values()} == set(LAYERS), "missing checks for layers")
     require(set().union(*(set(c["requirements"]) for c in definitions.values())) == requirements,
             "missing checks for requirements")
+
+    candidate_checks = set()
+    if integrated:
+        gates = spec.get("gates")
+        require(isinstance(gates, dict) and set(gates) == {"candidate", "release"}, "missing/invalid gates")
+        candidate_checks = names(gates.get("candidate"), "candidate checks")
+        mandatory = {name for name, check in definitions.items() if check["layer"] in {"unit", "presenter", "ui", "build"}}
+        mandatory.update({"native-thread-receipts", "app-runtime-smoke"})
+        require(mandatory <= candidate_checks <= definitions.keys(), "candidate gate missing/unknown checks")
+        require(names(gates.get("release"), "release checks") == definitions.keys(), "release gate must include all checks")
+        require(set().union(*(set(definitions[n]["requirements"]) for n in candidate_checks)) == requirements,
+                "candidate gate incomplete requirement coverage")
 
     inventory = load_json(hashed_file(evidence, data.get("inventory"), "inventory"))
     require(isinstance(inventory, dict) and type(inventory.get("schema")) is int and inventory["schema"] == 1,
@@ -151,6 +170,16 @@ def _validate(data, source, evidence, release):
     require(len(tokens) % 2 == 0, "unreadable Git diff")
     diff = dict(zip(tokens[1::2], tokens[::2]))
     require({p: row.get("status") for p, row in files.items()} == diff, "inventory does not exactly match upstream diff")
+    if integrated:
+        mapping_path = relative(spec.get("implementation_map"))
+        require(mapping_path in tracked, "implementation map not tracked")
+        mapping = load_json(inside(source, mapping_path))
+        require(mapping.get("schema") == 2 and mapping.get("upstream_commit") == upstream, "implementation map stale pin/schema")
+        reviewed = index(mapping.get("files"), "implementation map files", "path")
+        def projection(rows):
+            return {p: (r.get("status"), sorted(names(r.get("requirements"), "implementation map requirements")),
+                        sorted(names(r.get("checks"), "implementation map checks"))) for p, r in rows.items()}
+        require(projection(reviewed) == projection(files), "inventory differs from reviewed implementation map")
     for path, row in files.items():
         relative(path)
         require(row["status"] in {"A", "M", "D", "T"}, "unsupported diff status")
@@ -189,6 +218,8 @@ def _validate(data, source, evidence, release):
                 "command check scope crosses layer")
         require(command.get("source_commit") == head and command.get("spec_sha256") == spec_record["sha256"],
                 "stale command source/spec")
+        if integrated:
+            require(command.get("spec_commit") == head, "stale command spec commit")
         role = command.get("role")
         require(role in {"positive", "negative", "blocked"}, "missing/invalid command role")
         argv = command.get("argv")
@@ -237,8 +268,13 @@ def _validate(data, source, evidence, release):
         statuses[layer] = derived
     require("failed" not in statuses.values(), "failed layer evidence")
     qualified = all(status == "passed" for status in statuses.values())
+    candidate_ready = integrated and all(checks[name]["status"] == "passed" for name in candidate_checks)
+    require(not candidate or candidate_ready, "candidate gate: incomplete required checks")
     require(not release or qualified, "release gate: incomplete independent layers")
-    return {"integrity": "passed", "release_qualified": qualified, "source_commit": head,
+    return {"integrity": "passed", "candidate_ready": candidate_ready, "release_qualified": qualified, "source_commit": head,
+            "spec_commit": data.get("spec_commit"), "spec_sha256": spec_record["sha256"],
+            "candidate_blockers": sorted(n for n in candidate_checks if checks[n]["status"] != "passed"),
+            "release_blockers": sorted(n for n in checks if checks[n]["status"] != "passed"),
             "layers": statuses, "requirements": len(requirements), "checks": len(checks),
             "diff_files": len(files), "artifacts": len(artifacts)}
 
@@ -249,14 +285,16 @@ def main():
     parser.add_argument("--source-root", required=True, help="Git repository root")
     parser.add_argument("--evidence-root", required=True, help="Runtime evidence directory")
     parser.add_argument("--release", action="store_true", help="Require all six layers to pass")
+    parser.add_argument("--candidate", action="store_true", help="Require integrated candidate checks, not full release certification")
     args = parser.parse_args()
     try:
         evidence = Path(args.evidence_root).resolve()
-        result = validate(load_json(inside(evidence, args.manifest)), args.source_root, evidence, release=args.release)
+        result = validate(load_json(inside(evidence, args.manifest)), args.source_root, evidence,
+                          release=args.release, candidate=args.candidate)
         print(json.dumps(result, sort_keys=True))
         return 0
     except (ValueError, OSError, TypeError) as error:
-        print(json.dumps({"integrity": "rejected", "release_qualified": False, "error": str(error)}))
+        print(json.dumps({"integrity": "rejected", "candidate_ready": False, "release_qualified": False, "error": str(error)}))
         return 1
 
 

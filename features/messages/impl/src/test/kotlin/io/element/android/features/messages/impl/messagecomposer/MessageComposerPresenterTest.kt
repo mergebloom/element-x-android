@@ -2050,6 +2050,7 @@ class MessageComposerPresenterTest : RobolectricTest() {
         featureFlagService: FakeFeatureFlagService = FakeFeatureFlagService(),
         timelineController: TimelineController = TimelineController(room, timeline),
         captionDrafts: AttachmentCaptionDrafts = AttachmentCaptionDrafts(),
+        messageComposerContext: DefaultMessageComposerContext = DefaultMessageComposerContext(),
     ) = MessageComposerPresenter(
         navigator = navigator,
         sessionCoroutineScope = this,
@@ -2074,7 +2075,7 @@ class MessageComposerPresenterTest : RobolectricTest() {
         snackbarDispatcher = snackbarDispatcher,
         analyticsService = analyticsService,
         locationService = locationService,
-        messageComposerContext = DefaultMessageComposerContext(),
+        messageComposerContext = messageComposerContext,
         richTextEditorStateFactory = TestRichTextEditorStateFactory(),
         roomAliasSuggestionsDataSource = FakeRoomAliasSuggestionsDataSource(),
         permissionsPresenterFactory = FakePermissionsPresenterFactory(permissionPresenter),

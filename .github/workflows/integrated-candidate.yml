@@ -44,13 +44,13 @@ jobs:
           mkdir -p validation-evidence
           git rev-parse HEAD > validation-evidence/source-sha.txt
           python3 -B -m unittest discover -s intent -p 'test_*.py' -v
-          ./gradlew :libraries:audio:impl:testDebugUnitTest :libraries:mediaupload:impl:testDebugUnitTest :libraries:voicerecorder:impl:testDebugUnitTest :libraries:textcomposer:impl:testDebugUnitTest :features:messages:impl:testDebugUnitTest :libraries:matrix:impl:testDebugUnitTest :features:home:impl:testDebugUnitTest :appnav:testDebugUnitTest --continue --stacktrace --no-configuration-cache --no-parallel --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process -Dorg.gradle.jvmargs='-Xmx3g -XX:MaxMetaspaceSize=1g -XX:ActiveProcessorCount=2' -I tools/composer-validation.init.gradle -Proborazzi.test.record=true -Proborazzi.test.verify=false 2>&1 | tee validation-evidence/gradle.log
+          ./gradlew :libraries:audio:impl:testDebugUnitTest :libraries:mediaupload:impl:testDebugUnitTest :libraries:voicerecorder:impl:testDebugUnitTest :libraries:textcomposer:impl:testDebugUnitTest :features:messages:impl:testDebugUnitTest :libraries:matrix:impl:testDebugUnitTest :features:home:impl:testDebugUnitTest :appnav:testDebugUnitTest :features:location:impl:testDebugUnitTest :features:poll:impl:testDebugUnitTest --continue --stacktrace --no-configuration-cache --no-parallel --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process -Dorg.gradle.jvmargs='-Xmx3g -XX:MaxMetaspaceSize=1g -XX:ActiveProcessorCount=2' -I tools/composer-validation.init.gradle -Proborazzi.test.record=true -Proborazzi.test.verify=false 2>&1 | tee validation-evidence/gradle.log
       - name: Independently reject missing failed or unexpected skipped cases
         if: success() || failure()
         run: python3 tools/check-integrated-tests.py
       - name: Kotlin style
         if: success() || failure()
-        run: ./gradlew :libraries:audio:impl:ktlintCheck :libraries:textcomposer:impl:ktlintCheck :features:messages:impl:ktlintCheck :libraries:mediaupload:impl:ktlintCheck :libraries:voicerecorder:impl:ktlintCheck :libraries:matrix:impl:ktlintCheck :features:home:impl:ktlintCheck :appnav:ktlintCheck --no-configuration-cache --no-parallel --max-workers=2 -Dorg.gradle.jvmargs='-Xmx2g -XX:ActiveProcessorCount=2'
+        run: ./gradlew :libraries:audio:impl:ktlintCheck :libraries:textcomposer:impl:ktlintCheck :features:messages:impl:ktlintCheck :libraries:mediaupload:impl:ktlintCheck :libraries:voicerecorder:impl:ktlintCheck :libraries:matrix:impl:ktlintCheck :features:home:impl:ktlintCheck :appnav:ktlintCheck :features:location:impl:ktlintCheck :features:poll:impl:ktlintCheck --no-configuration-cache --no-parallel --max-workers=2 -Dorg.gradle.jvmargs='-Xmx2g -XX:ActiveProcessorCount=2'
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: always()
         with:
@@ -65,6 +65,8 @@ jobs:
             libraries/matrix/impl/build/test-results/
             features/home/impl/build/test-results/
             appnav/build/test-results/
+            features/location/impl/build/test-results/
+            features/poll/impl/build/test-results/
             libraries/textcomposer/impl/build/outputs/*screenshots/
             features/messages/impl/build/outputs/*screenshots/
             features/home/impl/build/outputs/threads-screenshots/

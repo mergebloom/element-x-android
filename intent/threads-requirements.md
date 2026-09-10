@@ -1,9 +1,9 @@
 # EC-003 / EC-006 — maintained Threads outcomes
 
-These additive requirements describe the approved Android Threads surface. They do not
-replace EX-001..004 (reasoning, ordinary composer behavior, and package identity),
-or constitute execution evidence. The integration owner must merge all feature
-requirements into the release evidence registry before release qualification.
+These implementation details support the integrated `requirements.md` and
+`contract.json`; they do not replace EX-001..004 or constitute execution evidence.
+The complete downstream map is `implementation-map.json`. Integrated requirements
+and approved supersession in `provenance.json` take precedence in any conflict.
 
 ## EC-003 — Useful cross-room unread thread navigation
 
@@ -68,8 +68,9 @@ requirements into the release evidence registry before release qualification.
 - `.github/workflows/threads-validation.yml`: exact-SHA canonical JVM/Robolectric
   suites and actual production Compose images, not a golden comparison claim.
 
-Each delivery's external requirement inventory lists every changed path and its
-SHA-256 against the frozen baseline/HEAD. Both Actions workflows must bind results
+Each delivery's external requirement inventory lists every changed path against
+the pinned upstream/HEAD, with nondeleted source SHA-256 in the manifest. The feature
+baseline is historical context, not the diff cutoff. Actions workflows must bind results
 to that same HEAD. Native SQLite/client reopen does not establish full Android
 process-death recovery, encryption coverage, physical accessibility, whole-app APK
 upgrade, or release approval. Those remain separately reported integration gates.

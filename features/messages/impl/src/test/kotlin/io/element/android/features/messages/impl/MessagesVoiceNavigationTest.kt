@@ -161,6 +161,7 @@ class MessagesVoiceNavigationTest : RobolectricTest() {
             threadTimelineLoader = mockk(relaxed = true),
             roomMemberModerationRenderer = mockk(relaxed = true),
             emojiPickerRenderer = mockk(relaxed = true),
+            draftNavigationGate = DefaultMessageDraftNavigationGate(),
         )
         val guard = node.voiceDraftNavigationGuard
         val state = voiceState(preview()) {}
@@ -228,6 +229,7 @@ class MessagesVoiceNavigationTest : RobolectricTest() {
             roomMemberModerationRenderer = mockk(relaxed = true),
             eventContentValidationCache = mockk(relaxed = true),
             emojiPickerRenderer = mockk(relaxed = true),
+            draftNavigationGate = DefaultMessageDraftNavigationGate(),
         )
         private val event = aTimelineItemEvent(
             eventId = ROOT,
