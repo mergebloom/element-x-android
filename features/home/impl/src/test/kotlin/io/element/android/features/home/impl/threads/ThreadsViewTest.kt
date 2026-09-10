@@ -204,18 +204,27 @@ class ThreadsViewTest : RobolectricTest() {
         onNodeWithText("Recent").assertIsSelected()
     }
 
-    @Test fun `capture production directory main states in light dark and large text`() {
+    @Test fun `capture production directory main states in light dark and large text`() = runAndroidComposeUiTest<ComponentActivity> {
         val directory = File("build/outputs/threads-screenshots").apply { mkdirs() }
+        val states = ThreadsStatePreviewProvider().values.toList()
+        val scenario = mutableStateOf(Triple(false, 1f, states.first()))
+        // Use the same real Activity/semantics path as the interaction tests. The
+        // standalone composable renderer can hang while creating repeated native windows.
+        setContent {
+            val (dark, fontScale, state) = scenario.value
+            ElementTheme(theme = if (dark) Theme.Dark else Theme.Light) {
+                CompositionLocalProvider(LocalDensity provides Density(1f, fontScale)) {
+                    Box(Modifier.size(360.dp, 800.dp)) { ThreadsView(state, {}, {}, {}, {}) }
+                }
+            }
+        }
         listOf(false, true).forEach { dark ->
             listOf(1f, 2f).forEach { fontScale ->
-                ThreadsStatePreviewProvider().values.forEachIndexed { index, state ->
-                    captureRoboImage(file = File(directory, "threads-$index-${if (dark) "dark" else "light"}-$fontScale.png")) {
-                        ElementTheme(theme = if (dark) Theme.Dark else Theme.Light) {
-                            CompositionLocalProvider(LocalDensity provides Density(1f, fontScale)) {
-                                Box(Modifier.size(360.dp, 800.dp)) { ThreadsView(state, {}, {}, {}, {}) }
-                            }
-                        }
-                    }
+                states.forEachIndexed { index, state ->
+                    runOnIdle { scenario.value = Triple(dark, fontScale, state) }
+                    onNodeWithText("Unread").assertIsDisplayed()
+                    onNodeWithText("Recent").assertIsDisplayed()
+                    onRoot().captureRoboImage(File(directory, "threads-$index-${if (dark) "dark" else "light"}-$fontScale.png").path)
                 }
             }
         }

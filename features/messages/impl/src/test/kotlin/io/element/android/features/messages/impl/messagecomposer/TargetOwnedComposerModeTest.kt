@@ -52,6 +52,8 @@ import io.element.android.libraries.mediaupload.test.FakeMediaOptimizationConfig
 import io.element.android.libraries.mediaupload.test.FakeMediaPreProcessor
 import io.element.android.libraries.permissions.test.FakePermissionsPresenter
 import io.element.android.libraries.permissions.test.FakePermissionsPresenterFactory
+import io.element.android.libraries.slashcommands.api.SlashCommand
+import io.element.android.libraries.slashcommands.test.FakeSlashCommandService
 import io.element.android.libraries.textcomposer.model.MessageComposerMode
 import io.element.android.libraries.textcomposer.model.TextEditorState
 import io.element.android.libraries.textcomposer.model.VoiceMessageRecorderEvent
@@ -354,6 +356,7 @@ class TargetOwnedComposerModeTest : RobolectricTest() {
             captionDrafts = fixture.captions,
             navigator = navigator,
             pickerProvider = FakePickerProvider().apply { givenResult(Uri.parse("content://synthetic/b-document")) },
+            slashCommandService = FakeSlashCommandService(parseResult = { _, _, _ -> SlashCommand.NotACommand }),
             isRichTextEditorEnabled = false,
         )
     }
