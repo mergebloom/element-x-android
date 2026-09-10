@@ -3,6 +3,10 @@
 allprojects {
     tasks.withType(Test).configureEach {
         maxParallelForks = 1
+        // Home mixes plain Molecule tests and native-graphics Robolectric classes.
+        // Isolate classloader/dispatcher state; do not drop any suite or capture.
+        if (project.path == ':features:home:impl') forkEvery = 1
+        testLogging { events 'started', 'failed', 'skipped' }
         // Home captures all 32 large-font/theme states in one native Compose test.
         // Preserve its upstream 2g budget; forcing 1g exhausts Robolectric ShadowTrace.
         maxHeapSize = project.path == ':features:home:impl' ? '2g' : '1g'

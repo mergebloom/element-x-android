@@ -10,18 +10,15 @@
 package io.element.android.features.messages.impl.attachments
 
 import android.net.Uri
+import android.widget.EditText
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.test.assertTextContains
-import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.v2.runAndroidComposeUiTest
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.bumble.appyx.core.children.nodeOrNull
 import com.bumble.appyx.core.modality.BuildContext
 import com.bumble.appyx.core.navigation.transition.JumpToEndTransitionHandler
 import com.bumble.appyx.core.node.Node
@@ -47,9 +44,11 @@ import io.element.android.libraries.designsystem.theme.components.Text
 import io.element.android.libraries.matrix.api.core.EventId
 import io.element.android.libraries.matrix.api.timeline.Timeline
 import io.element.android.libraries.matrix.test.A_SESSION_ID
+import io.element.android.libraries.mediaupload.test.FakeMediaPreProcessor
 import io.element.android.libraries.mediaviewer.api.local.LocalMedia
 import io.element.android.libraries.mediaviewer.api.local.LocalMediaRenderer
 import io.element.android.libraries.mediaviewer.test.viewer.aLocalMedia
+import io.element.android.libraries.testtags.TestTags
 import io.element.android.tests.testutils.clickOn
 import io.element.android.tests.testutils.fake.FakeTemporaryUriDeleter
 import io.element.android.tests.testutils.robolectric.RobolectricTest
@@ -88,18 +87,43 @@ class AttachmentsPreviewNodeNavigationTest : RobolectricTest() {
         }
         try {
             setSafeContent {
-                CompositionLocalProvider(LocalInspectionMode provides true) {
-                    ElementTheme {
-                        host.Compose()
-                    }
+                ElementTheme {
+                    host.Compose()
                 }
             }
             runOnIdle { host.backstack.push(Target.Preview) }
-            waitForIdle()
-            runOnIdle { session.advanceUntilIdle() }
-            waitForIdle()
-            val original = host.preview
-            onNode(hasSetTextAction()).performTextReplacement("Edited caption")
+            // Appyx attaches/builds the child and propagates the host lifecycle on Main,
+            // independently of the presenter's session test scheduler.
+            waitUntil(timeoutMillis = 5_000) {
+                runOnUiThread {
+                    host.previewCreations == 1 &&
+                        host.preview.lifecycle.currentState == Lifecycle.State.RESUMED &&
+                        activity!!.captionEditor()?.isAttachedToWindow == true
+                }
+            }
+            val original = runOnIdle {
+                host.preview.also {
+                    assertThat(it.parent).isSameInstanceAs(host)
+                    assertThat(host.children.value.values.map { child -> child.nodeOrNull }).contains(it)
+                }
+            }
+            runOnIdle {
+                // The default fake succeeds after a simulated delay. Drain its actual
+                // scheduler rather than treating Compose idleness as preprocessing completion.
+                session.advanceUntilIdle()
+                assertThat(host.mediaPreProcessor.processCallCount).isEqualTo(1)
+            }
+            awaitIdle()
+            // MarkdownTextInput embeds an Android EditText; it has no Compose SetText action.
+            // Exercise its installed TextWatcher, as MarkdownTextInputTest does.
+            val originalEditor = runOnIdle {
+                requireNotNull(activity!!.captionEditor()).also {
+                    assertThat(it.isShown).isTrue()
+                    assertThat(it.editableText.toString()).isEqualTo("Original caption")
+                    it.setText("Edited caption")
+                }
+            }
+            awaitIdle()
 
             // Use the registration installed by AttachmentsPreviewNode.View, never a manual registration.
             var navigations = 0
@@ -114,14 +138,23 @@ class AttachmentsPreviewNodeNavigationTest : RobolectricTest() {
             }
             runOnIdle { assertThat(host.gate.intercept(navigate)).isTrue() }
             clickOn(R.string.screen_caption_keep_editing)
-            waitForIdle()
+            awaitIdle()
             assertThat(navigations).isEqualTo(0)
             assertThat(host.acknowledgements).isEqualTo(0)
             assertThat(host.deletions).isEqualTo(0)
             assertThat(host.preview).isSameInstanceAs(original)
             assertThat(host.reachableTargets()).containsExactly(Target.Composer, Target.Preview).inOrder()
-            onNode(hasSetTextAction()).assertTextContains("Edited caption")
-            onNode(hasSetTextAction()).performTextReplacement("Still editable after Keep")
+            runOnIdle {
+                val editor = requireNotNull(activity!!.captionEditor())
+                assertThat(editor).isSameInstanceAs(originalEditor)
+                assertThat(editor.isShown).isTrue()
+                assertThat(editor.editableText.toString()).isEqualTo("Edited caption")
+                editor.setText("Still editable after Keep")
+            }
+            awaitIdle()
+            runOnIdle {
+                assertThat(activity!!.captionEditor()!!.editableText.toString()).isEqualTo("Still editable after Keep")
+            }
 
             runOnIdle {
                 assertThat(host.gate.intercept(navigate)).isTrue()
@@ -129,18 +162,24 @@ class AttachmentsPreviewNodeNavigationTest : RobolectricTest() {
                 assertThat(host.gate.intercept { error("Second external request replaced the first") }).isTrue()
             }
             clickOn(R.string.screen_caption_discard_attachment)
-            waitForIdle()
+            awaitIdle()
+            waitUntil(timeoutMillis = 5_000) {
+                runOnUiThread {
+                    original.lifecycle.currentState == Lifecycle.State.DESTROYED && activity!!.captionEditor() == null
+                }
+            }
             assertThat(navigations).isEqualTo(1)
             assertThat(host.acknowledgements).isEqualTo(1)
             assertThat(host.previewCreations).isEqualTo(1)
             assertThat(host.previewDestructions).isEqualTo(1)
             assertThat(host.reachableTargets()).doesNotContain(Target.Preview)
             onNodeWithText("Still editable after Keep").assertDoesNotExist()
+            runOnIdle { assertThat(originalEditor.isAttachedToWindow).isFalse() }
             if (destination != null) {
                 onNodeWithText(destination.name).assertExists()
                 // Actual Appyx parent Back handling, not a hand-written backstack pop in the test.
                 runOnUiThread { activity!!.onBackPressedDispatcher.onBackPressed() }
-                waitForIdle()
+                awaitIdle()
             }
             onNodeWithText(Target.Composer.name).assertExists()
             assertThat(host.reachableTargets()).containsExactly(Target.Composer)
@@ -156,6 +195,8 @@ class AttachmentsPreviewNodeNavigationTest : RobolectricTest() {
         }
     }
 
+    private fun ComponentActivity.captionEditor(): EditText? = window.decorView.findViewWithTag(TestTags.plainTextEditor.value)
+
     private enum class Target { Composer, Preview, User, Share }
 
     private class PreviewHost(private val session: TestScope) : BaseFlowNode<Target>(
@@ -164,6 +205,7 @@ class AttachmentsPreviewNodeNavigationTest : RobolectricTest() {
         plugins = emptyList(),
     ) {
         val gate = DefaultMessageDraftNavigationGate()
+        val mediaPreProcessor = FakeMediaPreProcessor()
         private val captionDrafts = AttachmentCaptionDrafts()
         private val draft = captionDrafts.capture("Original caption", false, { error("Discard must not restore the source") }, {
             error("Discard must not send or consume the source caption")
@@ -205,6 +247,7 @@ class AttachmentsPreviewNodeNavigationTest : RobolectricTest() {
                                 onDoneListener()
                             },
                             inReplyToEventId = inReplyToEventId,
+                            mediaPreProcessor = mediaPreProcessor,
                             captionDraft = captionDraft,
                             captionDrafts = captionDrafts,
                             temporaryUriDeleter = FakeTemporaryUriDeleter { deletions++ },

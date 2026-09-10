@@ -944,11 +944,15 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
     @Test
     fun `gallery exposes uploading and cancel retains caption for retry`() = runTest {
         val pending = kotlinx.coroutines.CompletableDeferred<Result<Unit>>()
+        val nativeAwaitEntered = kotlinx.coroutines.CompletableDeferred<Unit>()
         var cancelled = 0
         var attempts = 0
         val captions = mutableListOf<String?>()
         val handler = object : io.element.android.libraries.matrix.api.media.MediaUploadHandler {
-            override suspend fun await(): Result<Unit> = pending.await()
+            override suspend fun await(): Result<Unit> {
+                nativeAwaitEntered.complete(Unit)
+                return pending.await()
+            }
             override fun cancel() {
                 cancelled++
             }
@@ -975,6 +979,10 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             ready.eventSink(AttachmentsPreviewEvent.SendAttachment)
             val uploading = consumeItemsUntilPredicate { it.sendActionState is SendActionState.Sending.Uploading }.last()
             assertThat(presenter.blocksNavigation).isTrue()
+            // Uploading is shown before native enqueue completes. Exercise cancellation
+            // after this attempt actually owns a native handler, not during enqueue.
+            nativeAwaitEntered.await()
+            assertThat(attempts).isEqualTo(1)
             uploading.eventSink(AttachmentsPreviewEvent.CancelAndDismiss)
             assertThat(done).isEqualTo(0)
             uploading.eventSink(AttachmentsPreviewEvent.CancelAndClearSendState)

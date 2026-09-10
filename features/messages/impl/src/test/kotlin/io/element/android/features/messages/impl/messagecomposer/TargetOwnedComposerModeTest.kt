@@ -110,18 +110,19 @@ class TargetOwnedComposerModeTest : RobolectricTest() {
             val b = createComposer(fixture, inThread = true)
             var showB by mutableStateOf(false)
             var aDisposals = 0
+            // Propagate child recompositions out of SaveableStateProvider to the Molecule flow.
+            var current by mutableStateOf<MessageComposerState?>(null)
             moleculeFlow(RecompositionMode.Immediate) {
                 val holder = rememberSaveableStateHolder()
-                var current: MessageComposerState? = null
                 holder.SaveableStateProvider(if (showB) "thread-b" else "live-a") {
                     if (!showB) DisposableEffect(Unit) { onDispose { aDisposals++ } }
                     current = (if (showB) b else a).present()
                 }
                 requireNotNull(current)
             }.test {
-                awaitItem()
+                // Initialization need not emit again; keep the first state's event sink.
+                var state = awaitItem()
                 advanceUntilIdle()
-                var state = expectMostRecentItem()
                 state.eventSink(MessageComposerEvent.SetMode(origin.mode()))
                 advanceUntilIdle()
                 state = expectMostRecentItem()
@@ -171,9 +172,8 @@ class TargetOwnedComposerModeTest : RobolectricTest() {
             val a = createComposer(fixture, inThread = false)
             val b = createComposer(fixture, inThread = true)
             moleculeFlow(RecompositionMode.Immediate) { a.present() to b.present() }.test {
-                awaitItem()
+                val initial = awaitItem()
                 advanceUntilIdle()
-                val initial = expectMostRecentItem()
                 assertThat(fixture.waitingForBDraft).isTrue()
                 initial.first.eventSink(MessageComposerEvent.SetMode(ComposerDraftType.Reply(EVENT_A).mode()))
                 advanceUntilIdle()
@@ -229,9 +229,8 @@ class TargetOwnedComposerModeTest : RobolectricTest() {
             val a = createComposer(fixture, inThread = false)
             val b = createComposer(fixture, inThread = true, navigator = navigator)
             moleculeFlow(RecompositionMode.Immediate) { a.present() to b.present() }.test {
-                awaitItem()
+                var state = awaitItem()
                 advanceUntilIdle()
-                var state = expectMostRecentItem()
                 state.first.eventSink(MessageComposerEvent.SetMode(origin.mode()))
                 advanceUntilIdle()
                 state = expectMostRecentItem()
@@ -297,9 +296,9 @@ class TargetOwnedComposerModeTest : RobolectricTest() {
             val a = createComposer(fixture, inThread = false)
             val b = createComposer(fixture, inThread = true)
             moleculeFlow(RecompositionMode.Immediate) { a.present() to b.present() }.test {
-                awaitItem()
+                val initial = awaitItem()
                 advanceUntilIdle()
-                expectMostRecentItem().first.eventSink(MessageComposerEvent.SetMode(origin.mode()))
+                initial.first.eventSink(MessageComposerEvent.SetMode(origin.mode()))
                 advanceUntilIdle()
                 val state = expectMostRecentItem()
                 state.first.textEditorState.setMarkdown(A_DRAFT)
