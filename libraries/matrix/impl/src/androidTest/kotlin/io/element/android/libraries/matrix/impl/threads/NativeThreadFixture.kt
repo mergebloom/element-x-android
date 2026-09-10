@@ -5,10 +5,6 @@
 package io.element.android.libraries.matrix.impl.threads
 
 import androidx.test.platform.app.InstrumentationRegistry
-import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
-import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
@@ -40,6 +36,10 @@ import org.matrix.rustcomponents.sdk.initPlatform
 import org.matrix.rustcomponents.sdk.sdkGitSha
 import org.matrix.rustcomponents.sdk.use
 import uniffi.matrix_sdk_ui.TimelineReadReceiptTracking
+import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.UUID
 
 /** Test-only integration hook: actual pinned FFI objects, never NoHandle/fakes.
  * The only endpoint is the same-run, host-loopback fixture via emulator alias.
@@ -129,8 +129,12 @@ class NativeThreadFixture private constructor(val seed: JSONObject, private val 
             // Match production's Android/JNI + Tokio initialization, without any logging or telemetry.
             initPlatform(
                 TracingConfiguration(
-                    logLevel = LogLevel.ERROR, traceLogPacks = emptyList(), extraTargets = emptyList(),
-                    writeToStdoutOrSystem = false, writeToFiles = null, sentryConfig = null,
+                    logLevel = LogLevel.ERROR,
+                    traceLogPacks = emptyList(),
+                    extraTargets = emptyList(),
+                    writeToStdoutOrSystem = false,
+                    writeToFiles = null,
+                    sentryConfig = null,
                 ),
                 useLightweightTokioRuntime = false,
             )
@@ -200,8 +204,12 @@ data class NativeOrderedEvent(val id: String, val sender: String, val isOwn: Boo
 suspend fun Room.orderedThread(root: String, expectedIds: Set<String>): List<NativeOrderedEvent> {
     val timeline: Timeline = timelineWithConfiguration(
         TimelineConfiguration(
-            focus = TimelineFocus.Thread(root), filter = TimelineFilter.All, internalIdPrefix = "fixture",
-            dateDividerMode = DateDividerMode.DAILY, trackReadReceipts = TimelineReadReceiptTracking.MESSAGE_LIKE_EVENTS, reportUtds = false,
+            focus = TimelineFocus.Thread(root),
+            filter = TimelineFilter.All,
+            internalIdPrefix = "fixture",
+            dateDividerMode = DateDividerMode.DAILY,
+            trackReadReceipts = TimelineReadReceiptTracking.MESSAGE_LIKE_EVENTS,
+            reportUtds = false,
         )
     )
     val rows = mutableListOf<NativeOrderedEvent?>()
@@ -230,7 +238,10 @@ suspend fun Room.orderedThread(root: String, expectedIds: Set<String>): List<Nat
                             is TimelineDiff.Set -> rows[update.index.toInt()] = update.value.copyEvent()
                             is TimelineDiff.Remove -> rows.removeAt(update.index.toInt())
                             is TimelineDiff.Truncate -> rows.subList(update.length.toInt(), rows.size).clear()
-                            is TimelineDiff.Reset -> { rows.clear(); rows.addAll(update.values.map { it.copyEvent() }) }
+                            is TimelineDiff.Reset -> {
+                                rows.clear()
+                                rows.addAll(update.values.map { it.copyEvent() })
+                            }
                         }
                     }
                 } catch (failure: Throwable) {

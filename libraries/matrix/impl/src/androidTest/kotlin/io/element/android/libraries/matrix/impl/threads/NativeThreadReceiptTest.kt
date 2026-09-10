@@ -5,8 +5,11 @@
 package io.element.android.libraries.matrix.impl.threads
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import io.element.android.libraries.matrix.api.core.RoomId
+import io.element.android.libraries.matrix.api.core.UserId
+import io.element.android.libraries.matrix.api.threads.ThreadDirectoryRow
+import io.element.android.libraries.matrix.api.threads.ThreadReadState
 import io.element.android.libraries.matrix.impl.room.threads.RustThreadsListService
-import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -24,6 +27,7 @@ import org.matrix.rustcomponents.sdk.ReceiptThread
 import org.matrix.rustcomponents.sdk.ReceiptType
 import org.matrix.rustcomponents.sdk.use
 import uniffi.matrix_sdk_ui.ThreadListPaginationState
+import java.io.File
 
 /** Real Android AAR / native SSS / SQLite qualification, not app navigation or a fake SDK test. */
 @RunWith(AndroidJUnit4::class)
@@ -169,16 +173,81 @@ class NativeThreadReceiptTest {
                     assertEquals(newer, refreshed.single { it.rootEvent.eventId == fixture.root() }.latestEvent?.eventId)
                     room.orderedThread(fixture.root(), setOf(fixture.reply(), newer))
                     fixture.rooms.forEach { id ->
-                        alice.room(id).threadListService().use { other -> other.paginate(); other.items() }
+                        alice.room(id).threadListService().use { other ->
+                            other.paginate()
+                            other.items()
+                        }
                     }
-                    assertEquals("Browsing must make zero write requests (including redundant writes)", before,
-                        NativeThreadFixture.audit("browse_after").getInt("receipt_writes"))
+                    assertEquals(
+                        "Browsing must make zero write requests (including redundant writes)",
+                        before,
+                        NativeThreadFixture.audit("browse_after").getInt("receipt_writes")
+                    )
                 }
                 // Positive control: prove the proxy really detects a native receipt-write request.
                 room.sendSingleReceipt(ReceiptType.READ, scope, fixture.reply())
                 eventually("receipt auditing positive control") {
                     NativeThreadFixture.audit().getInt("receipt_writes") == before + 1
                 }
+            } finally {
+                fixture.close()
+            }
+        }
+    }
+
+    @Test
+    fun productionDirectoryResolvesReceiptChangesAcrossRoomsWithoutWriting() = runBlocking {
+        withTimeout(240_000) {
+            val fixture = NativeThreadFixture.create()
+            try {
+                val session = fixture.login()
+                val account = UserId(session.client.userId())
+                val source = RustThreadDirectorySource(session.client, account)
+                val before = NativeThreadFixture.audit().getInt("receipt_writes")
+                suspend fun rows(): List<ThreadDirectoryRow> {
+                    val rooms = source.syncAndRooms()
+                    assertEquals(fixture.rooms.toSet(), rooms.map { it.value }.toSet())
+                    val result = mutableListOf<ThreadDirectoryRow>()
+                    rooms.forEach { room -> source.scan(room) { result += it } }
+                    assertEquals(2, result.size)
+                    assertTrue(result.all { it.key.accountId == account })
+                    return result
+                }
+                assertTrue(rows().all { it.readState == ThreadReadState.Unknown })
+                fixture.receipt(fixture.reply(), "m.read")
+                val incoming = fixture.send()
+                val own = fixture.send(role = "alice")
+                eventually("production explicit unread despite own latest") {
+                    val current = rows()
+                    current.single { it.key.roomId.value == fixture.rooms[0] }.let {
+                        it.key.rootEventId.value == fixture.root() && it.readState == ThreadReadState.Unread && it.unreadCount == 1
+                    } && current.single { it.key.roomId.value == fixture.rooms[1] }.readState == ThreadReadState.Unknown
+                }
+                // Private receipt-only advancement, not a new head, must invalidate previous Unread.
+                fixture.receipt(own, "m.read.private")
+                eventually("production private receipt-only refresh") {
+                    rows().single { it.key.roomId.value == fixture.rooms[0] }.readState == ThreadReadState.Read
+                }
+                // An unthreaded receipt on another main-timeline event applies by actual native room order.
+                val mainEvent = fixture.send(root = null)
+                fixture.receipt(mainEvent, "m.read.private", thread = null)
+                eventually("production unrelated unthreaded anchor resolves") {
+                    rows().single { it.key.roomId.value == fixture.rooms[0] }.readState == ThreadReadState.Read
+                }
+                val latestIncoming = fixture.send()
+                assertTrue(incoming != latestIncoming)
+                eventually("production new incoming after room-wide explicit anchor") {
+                    rows().single { it.key.roomId.value == fixture.rooms[0] }.let {
+                        it.readState == ThreadReadState.Unread && it.unreadCount == 1
+                    }
+                }
+                assertTrue(source.isAvailable(io.element.android.libraries.matrix.api.threads.ThreadKey(
+                    account,
+                    RoomId(fixture.rooms[0]),
+                    io.element.android.libraries.matrix.api.core.EventId(fixture.root()),
+                )))
+                assertEquals(before, NativeThreadFixture.audit().getInt("receipt_writes"))
+                assertTrue(NativeThreadFixture.audit().getInt("sss_successes") > 0)
             } finally {
                 fixture.close()
             }

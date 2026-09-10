@@ -1,0 +1,69 @@
+name: Threads production validation
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [feature/threads-directory]
+    paths-ignore:
+      - 'scripts/threads-native/**'
+      - 'libraries/matrix/impl/src/androidTest/**'
+      - '.github/workflows/threads-native.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: threads-production-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  JAVA_TOOL_OPTIONS: -XX:ActiveProcessorCount=2
+  CI_GRADLE_ARG_PROPERTIES: --no-daemon --no-configuration-cache --no-parallel --max-workers=2
+
+jobs:
+  tests:
+    name: Production service, navigation and Compose regressions
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          submodules: false
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+      - name: Bind execution to source
+        run: |
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test ! -e libraries/rustsdk/matrix-rust-sdk.aar
+          mkdir -p threads-evidence
+          git rev-parse HEAD > threads-evidence/source-sha.txt
+          python3 -B -m unittest discover -s intent -p 'test_*.py' -v
+      - name: Run production module regressions and actual Compose captures
+        run: >-
+          ./gradlew :libraries:matrix:impl:testDebugUnitTest
+          :features:home:impl:testDebugUnitTest
+          :features:messages:impl:testDebugUnitTest
+          :libraries:textcomposer:impl:testDebugUnitTest
+          :appnav:compileDebugKotlin
+          -Proborazzi.test.record=true -Proborazzi.test.verify=false
+          -Dorg.gradle.jvmargs='-Xmx3g -XX:ActiveProcessorCount=2'
+          -Pkotlin.daemon.jvmargs='-Xmx2g -XX:ActiveProcessorCount=2'
+          $CI_GRADLE_ARG_PROPERTIES
+      - name: Preserve exact-source tests and production UI images
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: threads-production-${{ github.sha }}
+          path: |
+            threads-evidence/source-sha.txt
+            libraries/matrix/impl/build/test-results/
+            features/home/impl/build/test-results/
+            features/messages/impl/build/test-results/
+            libraries/textcomposer/impl/build/test-results/
+            features/home/impl/build/outputs/threads-screenshots/
+          if-no-files-found: error
+          retention-days: 14

@@ -26,7 +26,7 @@ class EvidenceTests(unittest.TestCase):
         self.assertFalse(parse_instrumentation("INSTRUMENTATION_CODE: -1")["passed"])
 
     def test_rejects_wrong_test_count(self):
-        self.assertFalse(parse_instrumentation(runner_output().replace("numtests=3", "numtests=0"))["passed"])
+        self.assertFalse(parse_instrumentation(runner_output().replace(f"numtests={len(EXPECTED)}", "numtests=0"))["passed"])
 
     def test_rejects_skip(self):
         self.assertFalse(parse_instrumentation(runner_output().replace("STATUS_CODE: 0", "STATUS_CODE: -3", 1))["passed"])
