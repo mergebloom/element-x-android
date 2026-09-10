@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="screen_thread_timeline_unavailable">Thread unavailable</string>
+    <string name="screen_thread_timeline_unavailable_description">This thread could not be opened. Go back and try again.</string>
+</resources>

@@ -337,14 +337,14 @@ class LoggedInFlowNode(
             NavTarget.Home -> {
                 val callback = object : HomeEntryPoint.Callback {
                     override suspend fun navigateToThread(key: io.element.android.libraries.matrix.api.threads.ThreadKey) {
-                        // This node outlives Home composition when attaching the room, then its thread.
+                        // Carry the target before any messages node is composed; never open the parent timeline first.
                         lifecycleScope.async {
                             check(key.accountId == matrixClient.sessionId)
                             attachRoom(
                                 roomIdOrAlias = key.roomId.toRoomIdOrAlias(),
-                                initialElement = RoomNavigationTarget.Root(eventId = key.rootEventId),
+                                initialElement = RoomNavigationTarget.Thread(io.element.android.libraries.matrix.api.core.ThreadId(key.rootEventId.value)),
                                 clearBackstack = false,
-                            ).attachThread(io.element.android.libraries.matrix.api.core.ThreadId(key.rootEventId.value), null)
+                            )
                         }.await()
                     }
 
@@ -423,7 +423,8 @@ class LoggedInFlowNode(
                                             roomIdOrAlias = data.roomIdOrAlias,
                                             serverNames = data.viaParameters,
                                             trigger = JoinedRoomAnalyticsEvent.Trigger.Timeline,
-                                            initialElement = RoomNavigationTarget.Root(data.eventId),
+                                            initialElement = data.threadId?.let { RoomNavigationTarget.Thread(it, data.eventId) }
+                                                ?: RoomNavigationTarget.Root(data.eventId),
                                             clearBackstack = false
                                         )
                                     }
@@ -433,7 +434,8 @@ class LoggedInFlowNode(
                                             roomIdOrAlias = data.roomIdOrAlias,
                                             serverNames = data.viaParameters,
                                             trigger = JoinedRoomAnalyticsEvent.Trigger.Timeline,
-                                            initialElement = RoomNavigationTarget.Root(data.eventId),
+                                            initialElement = data.threadId?.let { RoomNavigationTarget.Thread(it, data.eventId) }
+                                                ?: RoomNavigationTarget.Root(data.eventId),
                                         )
                                     )
                                 }

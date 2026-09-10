@@ -16,7 +16,10 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import org.matrix.rustcomponents.sdk.Client
+import org.matrix.rustcomponents.sdk.ClientException
+import org.matrix.rustcomponents.sdk.ErrorKind
 import org.matrix.rustcomponents.sdk.MessageLikeEventContent
 import org.matrix.rustcomponents.sdk.RoomSendQueueUpdate
 import org.matrix.rustcomponents.sdk.SendQueueRoomUpdateListener
@@ -33,22 +36,38 @@ internal fun observeConfirmedThreadSends(
     scope: CoroutineScope,
     dispatcher: CoroutineDispatcher,
 ) = scope.launch(dispatcher) {
+    recent.load() // establish the shared durable sequence before accepting native callbacks
     val signal = Channel<Unit>(Channel.CONFLATED)
     launch {
         do {
             pending.drain { entry ->
-                val room = checkNotNull(client.getRoom(entry.room))
-                room.use {
-                    room.loadOrFetchEvent(entry.event).use { event ->
-                        val root = event.threadRootEventId()
-                        val content = (event.content() as? TimelineEventContent.MessageLike)?.content
-                        if (root != null && event.senderId() == account.value && content is MessageLikeEventContent.RoomMessage) {
-                            recent.recordConfirmedSent(ThreadKey(account, RoomId(entry.room), EventId(root)), EventId(entry.event))
+                val room = client.getRoom(entry.room)
+                if (room == null) {
+                    Timber.w("Discarding confirmed activity for a removed room")
+                    return@drain
+                }
+                try {
+                    room.use {
+                        room.loadOrFetchEvent(entry.event).use { event ->
+                            val root = event.threadRootEventId()
+                            event.content().use { eventContent ->
+                                val content = (eventContent as? TimelineEventContent.MessageLike)?.content
+                                if (root != null && event.senderId() == account.value && content is MessageLikeEventContent.RoomMessage) {
+                                    recent.recordConfirmedSent(ThreadKey(account, RoomId(entry.room), EventId(root)), entry)
+                                }
+                            }
                         }
                     }
+                } catch (exception: ClientException.MatrixApi) {
+                    if (exception.kind != ErrorKind.Forbidden && exception.kind != ErrorKind.NotFound) throw exception
+                    Timber.w("Discarding confirmed activity whose event is permanently inaccessible")
                 }
             }
-            signal.receive()
+            if (pending.first() == null) {
+                signal.receive()
+            } else {
+                withTimeoutOrNull(PendingThreadSends.RETRY_MILLIS) { signal.receive() }
+            }
         } while (isActive)
     }
     while (isActive) {

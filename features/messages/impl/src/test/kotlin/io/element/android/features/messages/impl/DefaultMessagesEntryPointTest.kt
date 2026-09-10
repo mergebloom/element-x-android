@@ -11,6 +11,7 @@ package io.element.android.features.messages.impl
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.compose.runtime.Composable
 import com.bumble.appyx.core.modality.BuildContext
+import com.bumble.appyx.navmodel.backstack.activeElement
 import com.bumble.appyx.testing.junit4.util.MainDispatcherRule
 import com.google.common.truth.Truth.assertThat
 import io.element.android.features.call.test.FakeElementCallEntryPoint
@@ -57,6 +58,15 @@ class DefaultMessagesEntryPointTest {
 
     @Test
     fun `test node builder`() = runTest {
+        assertNodeBuilder(MessagesEntryPoint.InitialTarget.Messages(focusedEventId = AN_EVENT_ID))
+    }
+
+    @Test
+    fun `thread entry point starts with thread as root so Back cannot expose an unread parent`() = runTest {
+        assertNodeBuilder(MessagesEntryPoint.InitialTarget.Thread(io.element.android.libraries.matrix.test.A_THREAD_ID, AN_EVENT_ID))
+    }
+
+    private fun kotlinx.coroutines.test.TestScope.assertNodeBuilder(initialTarget: MessagesEntryPoint.InitialTarget) {
         val entryPoint = DefaultMessagesEntryPoint()
         val parentNode = TestParentNode.create { buildContext, plugins ->
             MessagesFlowNode(
@@ -98,7 +108,6 @@ class DefaultMessagesEntryPointTest {
             override fun navigateToRoom(roomId: RoomId) = lambdaError()
             override fun navigateToDeveloperSettings() = lambdaError()
         }
-        val initialTarget = MessagesEntryPoint.InitialTarget.Messages(focusedEventId = AN_EVENT_ID)
         val params = MessagesEntryPoint.Params(initialTarget)
         val result = entryPoint.createNode(
             parentNode = parentNode,
@@ -109,6 +118,12 @@ class DefaultMessagesEntryPointTest {
         assertThat(result).isInstanceOf(MessagesFlowNode::class.java)
         assertThat(result.plugins).contains(MessagesEntryPoint.Params(initialTarget))
         assertThat(result.plugins).contains(callback)
+        assertThat((result as MessagesFlowNode).backstack.activeElement).isEqualTo(initialTarget.toNavTarget())
+        assertThat(result.backstack.elements.value).hasSize(1)
+        if (initialTarget is MessagesEntryPoint.InitialTarget.Thread) {
+            assertThat(result.backstack.activeElement)
+                .isEqualTo(MessagesFlowNode.NavTarget.Thread(initialTarget.threadId, initialTarget.focusedEventId))
+        }
     }
 
     @Test

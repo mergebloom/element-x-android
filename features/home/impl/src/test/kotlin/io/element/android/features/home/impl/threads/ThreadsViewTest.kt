@@ -7,13 +7,13 @@
 
 package io.element.android.features.home.impl.threads
 
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.onNodeWithText
@@ -49,7 +49,7 @@ class ThreadsViewTest : RobolectricTest() {
     private val key = ThreadKey(UserId("@alice:example.org"), RoomId("!room:example.org"), EventId("$" + "root"))
     private val row = ThreadDirectoryRow(key, "Room name", "Root preview", ThreadReadState.Unread, 1)
 
-    @Test fun `production route browsing and tab changes never record opened or sent`() = runAndroidComposeUiTest {
+    @Test fun `production route browsing and tab changes never record opened or sent`() = runAndroidComposeUiTest<ComponentActivity> {
         val directory = FakeThreadDirectory().apply { state.value = ThreadDirectorySnapshot(listOf(row), ThreadCoverage.Complete) }
         val recent = FakeRecentThreads()
         val client = FakeMatrixClient(sessionId = key.accountId, threadDirectory = directory, recentThreads = recent)
@@ -61,7 +61,7 @@ class ThreadsViewTest : RobolectricTest() {
         assertEquals(0, directory.refreshCount)
     }
 
-    @Test fun `production route opens exact account room root without recording from directory`() = runAndroidComposeUiTest {
+    @Test fun `production route opens exact account room root without recording from directory`() = runAndroidComposeUiTest<ComponentActivity> {
         val directory = FakeThreadDirectory().apply { state.value = ThreadDirectorySnapshot(listOf(row), ThreadCoverage.Complete) }
         val recent = FakeRecentThreads()
         val client = FakeMatrixClient(sessionId = key.accountId, threadDirectory = directory, recentThreads = recent)
@@ -73,7 +73,7 @@ class ThreadsViewTest : RobolectricTest() {
         assertEquals(emptyList<RecentThread>(), recent.entries.value)
     }
 
-    @Test fun `unavailable target cannot silently open room and account switch dismisses old dialog`() = runAndroidComposeUiTest {
+    @Test fun `unavailable target cannot silently open room and account switch dismisses old dialog`() = runAndroidComposeUiTest<ComponentActivity> {
         val directory = FakeThreadDirectory().apply {
             available = false
             state.value = ThreadDirectorySnapshot(listOf(row), ThreadCoverage.Partial)
@@ -89,7 +89,7 @@ class ThreadsViewTest : RobolectricTest() {
         assertEquals(emptyList<RoomId>(), rooms)
     }
 
-    @Test fun `partial never displays false empty and check further back is actionable`() = runAndroidComposeUiTest {
+    @Test fun `partial never displays false empty and check further back is actionable`() = runAndroidComposeUiTest<ComponentActivity> {
         var requests = 0
         setContent {
             ElementTheme {
@@ -101,7 +101,7 @@ class ThreadsViewTest : RobolectricTest() {
         assertEquals(1, requests)
     }
 
-    @Test fun `recent keeps both different shortcuts visible`() = runAndroidComposeUiTest {
+    @Test fun `recent keeps both different shortcuts visible`() = runAndroidComposeUiTest<ComponentActivity> {
         val other = key.copy(rootEventId = EventId("$" + "other"))
         setContent {
             ElementTheme {

@@ -29,6 +29,9 @@ interface MessagesEntryPoint : FeatureEntryPoint {
         ) : InitialTarget
 
         @Parcelize
+        data class Thread(val threadId: ThreadId, val focusedEventId: EventId? = null) : InitialTarget
+
+        @Parcelize
         data object PinnedMessages : InitialTarget
     }
 

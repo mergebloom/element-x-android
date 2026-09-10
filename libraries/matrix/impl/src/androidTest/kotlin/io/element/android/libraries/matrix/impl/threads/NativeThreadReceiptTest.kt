@@ -254,6 +254,107 @@ class NativeThreadReceiptTest {
         }
     }
 
+    @Test
+    fun confirmedNativeTextFileAndVoiceSendsPersistRecentButFailureDoesNot() = runBlocking {
+        withTimeout(240_000) {
+            val fixture = NativeThreadFixture.create(rootCount = 12)
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val timelines = mutableListOf<org.matrix.rustcomponents.sdk.Timeline>()
+            try {
+                val session = fixture.login()
+                val account = UserId(session.client.userId())
+                val pending = PendingThreadSends(File(session.store, "recent-pending"))
+                val recentFile = File(session.store, "recent.properties")
+                val recent = FileRecentThreads(account, recentFile, Dispatchers.IO, pending)
+                recent.load()
+                val observer = observeConfirmedThreadSends(session.client, account, recent, pending, scope, Dispatchers.IO)
+                // Session construction precedes user input in the app; allow the actual FFI subscription to install.
+                kotlinx.coroutines.delay(300)
+                assertTrue(observer.isActive)
+                suspend fun timeline(index: Int): org.matrix.rustcomponents.sdk.Timeline = session.room(fixture.rooms[0]).timelineWithConfiguration(
+                    org.matrix.rustcomponents.sdk.TimelineConfiguration(
+                        focus = org.matrix.rustcomponents.sdk.TimelineFocus.Thread(fixture.root(rootIndex = index)),
+                        filter = org.matrix.rustcomponents.sdk.TimelineFilter.All,
+                        internalIdPrefix = "confirmed-fixture",
+                        dateDividerMode = org.matrix.rustcomponents.sdk.DateDividerMode.DAILY,
+                        trackReadReceipts = uniffi.matrix_sdk_ui.TimelineReadReceiptTracking.MESSAGE_LIKE_EVENTS,
+                        reportUtds = false,
+                    ),
+                ).also { timelines += it }
+                org.matrix.rustcomponents.sdk.messageEventContentFromMarkdown("synthetic native text").use { content ->
+                    timeline(0).send(content).destroy()
+                }
+                eventually("confirmed native text updates Recent") {
+                    recent.entries.value.singleOrNull()?.key?.rootEventId?.value == fixture.root()
+                }
+                val textSequence = recent.entries.value.single().messagedSequence
+                val document = File(session.store, "document.txt").apply { writeText("synthetic document") }
+                timeline(1).sendFile(
+                    org.matrix.rustcomponents.sdk.UploadParameters(
+                        source = org.matrix.rustcomponents.sdk.UploadSource.File(document.path),
+                        caption = "synthetic caption",
+                        formattedCaption = null,
+                        mentions = null,
+                        inReplyTo = null,
+                    ),
+                    org.matrix.rustcomponents.sdk.FileInfo("text/plain", document.length().toULong(), null, null),
+                ).use { it.join() }
+                eventually("confirmed native file updates correct thread") {
+                    recent.entries.value.firstOrNull()?.let { it.key.rootEventId.value == fixture.root(rootIndex = 1) && it.messagedSequence > textSequence } ==
+                        true
+                }
+                val audio = File(session.store, "voice.wav").apply {
+                    val samples = 800
+                    val buffer = java.nio.ByteBuffer.allocate(44 + samples * 2).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+                    buffer.put("RIFF".toByteArray()).putInt(36 + samples * 2).put("WAVEfmt ".toByteArray())
+                    buffer.putInt(16).putShort(1).putShort(1).putInt(8000).putInt(16000).putShort(2).putShort(16)
+                    buffer.put("data".toByteArray()).putInt(samples * 2)
+                    writeBytes(buffer.array())
+                }
+                val voiceTimeline = timeline(2)
+                voiceTimeline.sendVoiceMessage(
+                    org.matrix.rustcomponents.sdk.UploadParameters(
+                        source = org.matrix.rustcomponents.sdk.UploadSource.File(audio.path),
+                        caption = null,
+                        formattedCaption = null,
+                        mentions = null,
+                        inReplyTo = null,
+                    ),
+                    org.matrix.rustcomponents.sdk.AudioInfo(java.time.Duration.ofMillis(100), audio.length().toULong(), "audio/wav"),
+                    List(10) { 0f },
+                ).use { it.join() }
+                eventually("confirmed native voice updates correct thread") {
+                    recent.entries.value.size == 3 && recent.entries.value.first().key.rootEventId.value == fixture.root(rootIndex = 2)
+                }
+                val beforeFailure = recent.entries.value
+                val failed = runCatching {
+                    voiceTimeline.sendFile(
+                        org.matrix.rustcomponents.sdk.UploadParameters(
+                            source = org.matrix.rustcomponents.sdk.UploadSource.File(File(session.store, "absent.txt").path),
+                            caption = null,
+                            formattedCaption = null,
+                            mentions = null,
+                            inReplyTo = null,
+                        ),
+                        org.matrix.rustcomponents.sdk.FileInfo("text/plain", 1u, null, null),
+                    ).use { it.join() }
+                }
+                assertTrue(failed.isFailure)
+                assertEquals(beforeFailure, recent.entries.value)
+                observer.cancel()
+                observer.join()
+                val reopened = FileRecentThreads(account, recentFile, Dispatchers.IO, pending)
+                reopened.load()
+                assertEquals(beforeFailure, reopened.entries.value)
+                assertFalse(recentFile.readText().contains("synthetic"))
+            } finally {
+                scope.cancel()
+                timelines.forEach { it.destroy() }
+                fixture.close()
+            }
+        }
+    }
+
     private fun hasSqliteHeader(file: File): Boolean = file.isFile && file.length() >= 16 &&
         file.inputStream().use { input ->
             val header = ByteArray(16)

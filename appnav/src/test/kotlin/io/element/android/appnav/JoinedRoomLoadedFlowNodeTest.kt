@@ -144,6 +144,24 @@ class JoinedRoomLoadedFlowNodeTest : RobolectricTest() {
     )
 
     @Test
+    fun `initial thread reaches messages entry point without an ordinary messages target`() = runTest {
+        val room = FakeJoinedRoom(baseRoom = FakeBaseRoom(updateMembersResult = {}))
+        val entryPoint = FakeMessagesEntryPoint()
+        val threadId = io.element.android.libraries.matrix.test.A_THREAD_ID
+        val eventId = io.element.android.libraries.matrix.test.AN_EVENT_ID
+        val node = createJoinedRoomLoadedFlowNode(
+            plugins = listOf(
+                JoinedRoomLoadedFlowNode.Inputs(room, RoomNavigationTarget.Thread(threadId, eventId)),
+                FakeJoinedRoomLoadedFlowNodeCallback(),
+            ),
+            messagesEntryPoint = entryPoint,
+        )
+        node.parentNodeTestHelper()
+        assertThat(entryPoint.parameters).isEqualTo(MessagesEntryPoint.Params(MessagesEntryPoint.InitialTarget.Thread(threadId, eventId)))
+        assertThat(node.childNode(JoinedRoomLoadedFlowNode.NavTarget.Messages())).isNull()
+    }
+
+    @Test
     fun `given a room flow node when initialized then it loads messages entry point if room is not space`() = runTest {
         // GIVEN
         val room = FakeJoinedRoom(baseRoom = FakeBaseRoom(updateMembersResult = {}, initialRoomInfo = aRoomInfo(isSpace = false)))

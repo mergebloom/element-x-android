@@ -170,6 +170,7 @@ class RustMatrixClient(
 
     private val pendingThreadSends = io.element.android.libraries.matrix.impl.threads.PendingThreadSends(
         File(sessionPaths.fileDirectory, "recent-thread-sends.pending"),
+        sessionId.value,
     )
     override val recentThreads = io.element.android.libraries.matrix.impl.threads.FileRecentThreads(
         sessionId,

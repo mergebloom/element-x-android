@@ -110,6 +110,75 @@ class TimelinePresenterTest {
     val warmUpRule = WarmUpRule()
 
     @Test
+    fun `opened thread public receipts never touch parent or another thread`() = runTest {
+        assertOpenedThreadReceipts(publicReceipts = true)
+    }
+
+    @Test
+    fun `opened thread private receipts never touch parent or another thread`() = runTest {
+        assertOpenedThreadReceipts(publicReceipts = false)
+    }
+
+    private suspend fun TestScope.assertOpenedThreadReceipts(publicReceipts: Boolean) {
+        val calls = mutableListOf<Pair<String, ReceiptType>>()
+        val requests = mutableListOf<io.element.android.libraries.matrix.api.room.CreateTimelineParams>()
+        val recent = io.element.android.libraries.matrix.test.threads.FakeRecentThreads()
+        fun timeline(name: String, mode: Timeline.Mode) = FakeTimeline(
+            mode = mode,
+            timelineItems = flowOf(
+                listOf(
+                    MatrixTimelineItem.Event(A_UNIQUE_ID, anEventTimelineItem()),
+                    MatrixTimelineItem.Event(A_UNIQUE_ID_2, anEventTimelineItem(eventId = AN_EVENT_ID_2)),
+                )
+            ),
+            markAsReadResult = {
+                calls += "$name mark" to it
+                Result.success(Unit)
+            },
+            sendReadReceiptLambda = { _, type ->
+                calls += "$name receipt" to type
+                Result.success(Unit)
+            },
+        )
+        val target = timeline("target", Timeline.Mode.Thread(A_THREAD_ID))
+        val other = timeline("other", Timeline.Mode.Thread(ThreadId("\$other")))
+        val room = FakeJoinedRoom(
+            liveTimeline = timeline("parent", Timeline.Mode.Live),
+            baseRoom = FakeBaseRoom(roomPermissions = roomPermissions()),
+            createTimelineResult = {
+                requests += it
+                Result.success(if (it == io.element.android.libraries.matrix.api.room.CreateTimelineParams.Threaded(A_THREAD_ID)) target else other)
+            },
+        )
+        val loaded = io.element.android.features.messages.impl.threads.ThreadTimelineLoader(
+            room,
+            io.element.android.libraries.matrix.test.FakeMatrixClient(recentThreads = recent),
+        ).load(A_THREAD_ID)
+        val presenter = createTimelinePresenter(
+            room = room,
+            timeline = target,
+            timelineController = loaded.controller,
+            sessionPreferencesStore = InMemorySessionPreferencesStore(isSendPublicReadReceiptsEnabled = publicReceipts),
+        )
+        presenter.test {
+            val state = consumeItemsUntilPredicate { it.timelineItems.count { item -> item is TimelineItem.Event } >= 2 }.last()
+            assertThat(calls).isEmpty()
+            assertThat(recent.entries.value).isEmpty()
+            loaded.onDisplayed()
+            // The same event emitted by TimelineView on its first settled visible layout.
+            state.eventSink(TimelineEvent.OnScrollFinished(0))
+            state.eventSink(TimelineEvent.OnScrollFinished(1))
+            advanceUntilIdle()
+            val type = if (publicReceipts) ReceiptType.READ else ReceiptType.READ_PRIVATE
+            assertThat(calls).containsExactly("target mark" to type, "target receipt" to type)
+            assertThat(requests).containsExactly(io.element.android.libraries.matrix.api.room.CreateTimelineParams.Threaded(A_THREAD_ID))
+            assertThat(recent.entries.value.map { it.key }).containsExactly(loaded.key)
+            cancelAndIgnoreRemainingEvents()
+        }
+        loaded.close()
+    }
+
+    @Test
     fun `present - initial state`() = runTest {
         val presenter = createTimelinePresenter()
         presenter.test {
@@ -1894,6 +1963,7 @@ class TimelinePresenterTest {
         markAsFullyRead: MarkAsFullyRead = FakeMarkAsFullyRead { _, _ -> },
         timelineProtectionPresenter: Presenter<TimelineProtectionState> = { aTimelineProtectionState() },
         resolveVerifiedUserSendFailurePresenter: Presenter<ResolveVerifiedUserSendFailureState> = { aResolveVerifiedUserSendFailureState() },
+        timelineController: TimelineController = TimelineController(room, timeline),
     ): TimelinePresenter {
         return TimelinePresenter(
             timelineItemsFactoryCreator = aTimelineItemsFactoryCreator(),
@@ -1906,7 +1976,7 @@ class TimelinePresenterTest {
             sendPollResponseAction = sendPollResponseAction,
             sessionPreferencesStore = sessionPreferencesStore,
             timelineItemIndexer = timelineItemIndexer,
-            timelineController = TimelineController(room, timeline),
+            timelineController = timelineController,
             resolveVerifiedUserSendFailurePresenter = resolveVerifiedUserSendFailurePresenter,
             typingNotificationPresenter = { aTypingNotificationState() },
             roomCallStatePresenter = { aStandByCallState() },

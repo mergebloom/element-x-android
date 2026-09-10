@@ -82,6 +82,62 @@ class FileRecentThreadsTest {
         assertThat(runCatching { another.recordSent(key(1)) }.isFailure).isTrue()
     }
 
+    @Test fun `restart after durable clear marker cannot expose pre clear history`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val file = File(temporary.root, "recent")
+        val pendingFile = File(temporary.root, "pending")
+        val pending = PendingThreadSends(pendingFile, account.value)
+        val store = FileRecentThreads(account, file, dispatcher, pending)
+        store.recordOpened(key(1))
+        // Simulate process death after the first clear write, before the Recent snapshot replacement.
+        pending.clear()
+        val restarted = FileRecentThreads(account, file, dispatcher, PendingThreadSends(pendingFile, account.value))
+        restarted.load()
+        assertThat(restarted.entries.value).isEmpty()
+        restarted.recordOpened(key(2))
+        assertThat(restarted.entries.value.map { it.key }).containsExactly(key(2))
+    }
+
+    @Test fun `partial clear write failure cannot restore cleared rows on the next action`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val file = File(temporary.root, "recent")
+        val pendingFile = File(temporary.root, "pending")
+        val pending = PendingThreadSends(pendingFile, account.value)
+        val store = FileRecentThreads(account, file, dispatcher, pending)
+        store.recordOpened(key(1))
+        val blocker = File(file.path + ".tmp").apply { mkdir() }
+        assertThat(runCatching { store.clear() }.isFailure).isTrue()
+        assertThat(store.entries.value).isEmpty()
+        blocker.delete()
+        store.recordOpened(key(2))
+        assertThat(store.entries.value.map { it.key }).containsExactly(key(2))
+        assertThat(FileRecentThreads(account, file, dispatcher, pending).also { it.load() }.entries.value).isEqualTo(store.entries.value)
+    }
+
+    @Test fun `failed recent persistence leaves confirmation pending and pointer unchanged`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val file = File(temporary.root, "recent")
+        val pendingFile = File(temporary.root, "pending")
+        val pending = PendingThreadSends(pendingFile, account.value)
+        val store = FileRecentThreads(account, file, dispatcher, pending)
+        store.recordOpened(key(1))
+        val before = store.entries.value
+        val entry = pending.append(PendingThreadSends.Entry(key(2).roomId.value, "$" + "confirmed"))
+        val blocker = File(file.path + ".tmp").apply { mkdir() }
+        assertThat(runCatching { store.recordConfirmedSent(key(2), entry) }.isFailure).isTrue()
+        assertThat(store.entries.value).isEqualTo(before)
+        assertThat(pending.first()).isEqualTo(entry)
+        assertThat(FileRecentThreads(account, file, dispatcher, pending).also { it.load() }.entries.value).isEqualTo(before)
+        blocker.delete()
+        store.recordConfirmedSent(key(2), entry)
+        // Crash window: Recent committed, journal completion not committed. Replay must be a no-op.
+        val after = store.entries.value
+        val restartedPending = PendingThreadSends(pendingFile, account.value)
+        val restarted = FileRecentThreads(account, file, dispatcher, restartedPending)
+        restarted.recordConfirmedSent(key(2), restartedPending.first()!!)
+        assertThat(restarted.entries.value).isEqualTo(after)
+    }
+
     @Test fun `concurrent actions have unique durable sequences and clear persists`() = runTest {
         val file = File(temporary.root, "recent")
         val dispatcher = StandardTestDispatcher(testScheduler)

@@ -135,7 +135,7 @@ class TimelineController(
             detached.isPresent -> detached.get()
             else -> live
         }
-    }.stateIn(coroutineScope, SharingStarted.Eagerly, room.liveTimeline)
+    }.stateIn(coroutineScope, SharingStarted.Eagerly, liveTimeline)
 
     override fun activeTimelineFlow(): StateFlow<Timeline> {
         return currentTimelineFlow

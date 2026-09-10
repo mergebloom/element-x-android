@@ -48,7 +48,7 @@ jobs:
           :features:home:impl:testDebugUnitTest
           :features:messages:impl:testDebugUnitTest
           :libraries:textcomposer:impl:testDebugUnitTest
-          :appnav:compileDebugKotlin
+          :appnav:testDebugUnitTest
           -Proborazzi.test.record=true -Proborazzi.test.verify=false
           -Dorg.gradle.jvmargs='-Xmx3g -XX:ActiveProcessorCount=2'
           -Pkotlin.daemon.jvmargs='-Xmx2g -XX:ActiveProcessorCount=2'
@@ -60,6 +60,7 @@ jobs:
           name: threads-production-${{ github.sha }}
           path: |
             threads-evidence/source-sha.txt
+            appnav/build/test-results/
             libraries/matrix/impl/build/test-results/
             features/home/impl/build/test-results/
             features/messages/impl/build/test-results/

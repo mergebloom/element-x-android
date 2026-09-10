@@ -268,7 +268,8 @@ class JoinedRoomLoadedFlowNode(
             }
         }
         val params = MessagesEntryPoint.Params(
-            MessagesEntryPoint.InitialTarget.Messages(navTarget.focusedEventId)
+            navTarget.threadId?.let { MessagesEntryPoint.InitialTarget.Thread(it, navTarget.focusedEventId) }
+                ?: MessagesEntryPoint.InitialTarget.Messages(navTarget.focusedEventId)
         )
         return messagesEntryPoint.createNode(
             parentNode = this,
@@ -285,6 +286,7 @@ class JoinedRoomLoadedFlowNode(
         @Parcelize
         data class Messages(
             val focusedEventId: EventId? = null,
+            val threadId: ThreadId? = null,
         ) : NavTarget
 
         @Parcelize
@@ -329,6 +331,10 @@ private fun initialElement(plugins: List<Plugin>): JoinedRoomLoadedFlowNode.NavT
             }
         }
         RoomNavigationTarget.Details -> JoinedRoomLoadedFlowNode.NavTarget.RoomDetails
+        is RoomNavigationTarget.Thread -> JoinedRoomLoadedFlowNode.NavTarget.Messages(
+            focusedEventId = input.initialElement.focusedEventId,
+            threadId = input.initialElement.threadId,
+        )
         RoomNavigationTarget.NotificationSettings -> JoinedRoomLoadedFlowNode.NavTarget.RoomNotificationSettings
     }
 }

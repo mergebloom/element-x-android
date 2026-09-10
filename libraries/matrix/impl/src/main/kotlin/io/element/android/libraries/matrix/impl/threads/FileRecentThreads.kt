@@ -31,6 +31,7 @@ class FileRecentThreads(
     private val mutex = Mutex()
     private var sequence = 0L
     private var highWaterTime = 0L
+    private var generation = 0L
     private var loaded = false
     private val mutableEntries = MutableStateFlow<List<RecentThread>>(emptyList())
     override val entries = mutableEntries.asStateFlow()
@@ -40,6 +41,7 @@ class FileRecentThreads(
         val data = Properties().apply { file.inputStream().use(::load) }
         check(data.getProperty("account") == account.value)
         sequence = data.getProperty("sequence").toLong()
+        generation = data.getProperty("generation", "0").toLong()
         highWaterTime = maxOf(data.getProperty("time").toLong(), now())
         (0 until data.getProperty("count").toInt().coerceIn(0, LIMIT)).map { index ->
             RecentThread(
@@ -56,7 +58,11 @@ class FileRecentThreads(
 
     private fun ensureLoaded() {
         if (!loaded) {
-            mutableEntries.value = read()
+            val rows = read()
+            pending?.advanceSequence(sequence)
+            val currentGeneration = pending?.generation ?: generation
+            mutableEntries.value = if (generation == currentGeneration) rows else emptyList()
+            generation = currentGeneration
             loaded = true
         }
     }
@@ -64,33 +70,49 @@ class FileRecentThreads(
     override suspend fun recordOpened(key: ThreadKey) = record(key, opened = true)
     override suspend fun recordSent(key: ThreadKey) = record(key, opened = false)
 
-    suspend fun recordConfirmedSent(key: ThreadKey, event: EventId) = record(key, opened = false, event = event)
+    suspend fun recordConfirmedSent(key: ThreadKey, entry: PendingThreadSends.Entry) = withContext(dispatcher) {
+        require(key.accountId == account)
+        require(key.roomId.value == entry.room)
+        mutex.withLock {
+            ensureLoaded()
+            checkNotNull(pending).ifPending(entry) {
+                update(key, opened = false, event = EventId(entry.event), next = entry.sequence)
+            }
+        }
+    }
 
-    private suspend fun record(key: ThreadKey, opened: Boolean, event: EventId? = null) = withContext(dispatcher) {
+    private suspend fun record(key: ThreadKey, opened: Boolean) = withContext(dispatcher) {
         require(key.accountId == account)
         mutex.withLock {
             ensureLoaded()
-            highWaterTime = maxOf(highWaterTime, now()) // rollback cannot reorder or prematurely expire activity
-            val previous = mutableEntries.value.firstOrNull { it.key == key } ?: RecentThread(key)
-            if (event != null && previous.confirmedEventId == event) return@withLock
-            // Clear history may race an in-flight relation lookup. Don't resurrect an already cleared confirmation.
-            if (event != null && pending != null && pending.first()?.event != event.value) return@withLock
-            val next = ++sequence
-            val updated = if (opened) {
-                previous.copy(openedSequence = next, activeAtMillis = highWaterTime)
-            } else {
-                previous.copy(messagedSequence = next, activeAtMillis = highWaterTime, confirmedEventId = event)
-            }
-            val retained = retain(mutableEntries.value.filter { it.key != key } + updated)
-            persist(retained)
-            mutableEntries.value = retained
+            val next = pending?.nextSequence(sequence) ?: Math.addExact(sequence, 1)
+            update(key, opened, next = next)
         }
+    }
+
+    private fun update(key: ThreadKey, opened: Boolean, event: EventId? = null, next: Long) {
+        highWaterTime = maxOf(highWaterTime, now()) // rollback cannot reorder or prematurely expire activity
+        val previous = mutableEntries.value.firstOrNull { it.key == key } ?: RecentThread(key)
+        // Both crash replay and an older delayed resolution are idempotent, including for the same root.
+        if (!opened && (next <= previous.messagedSequence || (event != null && previous.confirmedEventId == event))) return
+        sequence = maxOf(sequence, next)
+        val updated = if (opened) {
+            previous.copy(openedSequence = next, activeAtMillis = highWaterTime)
+        } else {
+            previous.copy(messagedSequence = next, activeAtMillis = highWaterTime, confirmedEventId = event)
+        }
+        val retained = retain(mutableEntries.value.filter { it.key != key } + updated)
+        persist(retained)
+        mutableEntries.value = retained
     }
 
     override suspend fun clear() = withContext(dispatcher) {
         mutex.withLock {
             ensureLoaded()
             pending?.clear()
+            generation = pending?.generation ?: generation
+            // The journal generation is already a durable clear, even if the second file write fails.
+            if (pending != null) mutableEntries.value = emptyList()
             persist(emptyList())
             mutableEntries.value = emptyList()
         }
@@ -108,6 +130,7 @@ class FileRecentThreads(
     private fun persist(rows: List<RecentThread>) {
         val data = Properties().apply {
             setProperty("account", account.value)
+            setProperty("generation", generation.toString())
             setProperty("sequence", sequence.toString())
             setProperty("time", highWaterTime.toString())
             setProperty("count", rows.size.toString())

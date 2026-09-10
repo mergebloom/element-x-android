@@ -18,6 +18,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import com.bumble.appyx.core.lifecycle.subscribe
@@ -33,6 +34,7 @@ import io.element.android.features.messages.impl.MessagesNavigator
 import io.element.android.features.messages.impl.MessagesPresenter
 import io.element.android.features.messages.impl.MessagesState
 import io.element.android.features.messages.impl.MessagesView
+import io.element.android.features.messages.impl.R
 import io.element.android.features.messages.impl.actionlist.ActionListPresenter
 import io.element.android.features.messages.impl.actionlist.model.TimelineItemActionPostProcessor
 import io.element.android.features.messages.impl.attachments.Attachment
@@ -55,6 +57,7 @@ import io.element.android.libraries.architecture.Presenter
 import io.element.android.libraries.architecture.callback
 import io.element.android.libraries.architecture.inputs
 import io.element.android.libraries.core.extensions.runCatchingExceptions
+import io.element.android.libraries.designsystem.components.dialogs.AlertDialog
 import io.element.android.libraries.designsystem.utils.OnLifecycleEvent
 import io.element.android.libraries.di.RoomScope
 import io.element.android.libraries.emoji.api.picker.EmojiPickerRenderer
@@ -63,11 +66,9 @@ import io.element.android.libraries.matrix.api.core.EventId
 import io.element.android.libraries.matrix.api.core.RoomId
 import io.element.android.libraries.matrix.api.core.ThreadId
 import io.element.android.libraries.matrix.api.core.UserId
-import io.element.android.libraries.matrix.api.core.asEventId
 import io.element.android.libraries.matrix.api.core.toRoomIdOrAlias
 import io.element.android.libraries.matrix.api.permalink.PermalinkData
 import io.element.android.libraries.matrix.api.permalink.PermalinkParser
-import io.element.android.libraries.matrix.api.room.CreateTimelineParams
 import io.element.android.libraries.matrix.api.room.JoinedRoom
 import io.element.android.libraries.matrix.api.room.alias.matches
 import io.element.android.libraries.matrix.api.timeline.Timeline
@@ -97,7 +98,7 @@ class ThreadedMessagesNode(
     private val appNavigationStateService: AppNavigationStateService,
     private val roomMemberModerationRenderer: RoomMemberModerationRenderer,
     private val emojiPickerRenderer: EmojiPickerRenderer,
-    private val matrixClient: io.element.android.libraries.matrix.api.MatrixClient,
+    private val threadTimelineLoader: ThreadTimelineLoader,
 ) : Node(buildContext, plugins = plugins), MessagesNavigator {
     data class Inputs(
         val threadRootEventId: ThreadId,
@@ -109,14 +110,17 @@ class ThreadedMessagesNode(
 
     private var timelineController: TimelineController? by mutableStateOf(null)
     private var presenter: Presenter<MessagesState>? by mutableStateOf(null)
+    private var loadedThread: LoadedThreadTimeline? = null
+    private var unavailable by mutableStateOf(false)
 
     /**
      * This should be fast to load, but not faster than several UI frames, which will cause ANRs.
      * We'll load the [presenter] in an async way to prevent this.
      */
     private suspend fun createPresenter(): Presenter<MessagesState> {
-        val threadedTimeline = room.createTimeline(CreateTimelineParams.Threaded(threadRootEventId = inputs.threadRootEventId)).getOrThrow()
-        val timelineController = TimelineController(room, threadedTimeline)
+        val loaded = threadTimelineLoader.load(inputs.threadRootEventId)
+        loadedThread = loaded
+        val timelineController = loaded.controller
         this.timelineController = timelineController
         return presenterFactory.create(
             navigator = this,
@@ -157,7 +161,12 @@ class ThreadedMessagesNode(
             onCreate = {
                 analyticsService.capture(room.toAnalyticsViewRoom())
                 lifecycleScope.launch {
-                    presenter = createPresenter()
+                    runCatchingExceptions { createPresenter() }
+                        .onSuccess { presenter = it }
+                        .onFailure {
+                            loadedThread?.close()
+                            unavailable = true
+                        }
                 }
             },
             onStart = {
@@ -166,6 +175,7 @@ class ThreadedMessagesNode(
             onStop = {
                 appNavigationStateService.onLeavingThread(id)
             },
+            onDestroy = { loadedThread?.close() },
         )
     }
 
@@ -207,11 +217,8 @@ class ThreadedMessagesNode(
             if (eventId != null) {
                 eventSink(TimelineEvent.FocusOnEvent(eventId))
             } else {
-                // Click on the same room, navigate up
-                // Note that it can not be enough to go back to the room if the thread has been opened
-                // following a permalink from another thread. In this case navigating up will go back
-                // to the previous thread. But this should not happen often.
-                navigateUp()
+                // A direct thread has no parent timeline in its backstack. A room link is a deliberate room navigation.
+                callback.handlePermalinkClick(roomLink)
             }
         } else {
             callback.handlePermalinkClick(roomLink)
@@ -264,6 +271,14 @@ class ThreadedMessagesNode(
 
     @Composable
     override fun View(modifier: Modifier) {
+        if (unavailable) {
+            AlertDialog(
+                title = stringResource(R.string.screen_thread_timeline_unavailable),
+                content = stringResource(R.string.screen_thread_timeline_unavailable_description),
+                onDismiss = this::navigateUp,
+            )
+            return
+        }
         val activity = requireNotNull(LocalActivity.current)
         val isDark = ElementTheme.isLightTheme.not()
         val canUseOverlay = !isTalkbackActive() && !hasExternalKeyboard()
@@ -273,14 +288,7 @@ class ThreadedMessagesNode(
             // Only display the actual UI and lifecycle logic if the presenter is loaded
             presenter?.present()?.let { state ->
                 LaunchedEffect(inputs.threadRootEventId) {
-                    runCatchingExceptions {
-                        val key = io.element.android.libraries.matrix.api.threads.ThreadKey(
-                            matrixClient.sessionId,
-                            room.roomId,
-                            inputs.threadRootEventId.asEventId(),
-                        )
-                        if (matrixClient.threadDirectory.isAvailable(key)) matrixClient.recentThreads.recordOpened(key)
-                    }
+                    runCatchingExceptions { loadedThread?.onDisplayed() }
                 }
                 OnLifecycleEvent { _, event ->
                     when (event) {

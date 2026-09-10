@@ -18,6 +18,7 @@ EXPECTED = {
     "nativePaginationAndProductionListAdapterReachOlderRoots",
     "receiptOnlyRefreshNewRootAndBrowsingNeverWriteReceipts",
     "productionDirectoryResolvesReceiptChangesAcrossRoomsWithoutWriting",
+    "confirmedNativeTextFileAndVoiceSendsPersistRecentButFailureDoesNot",
 }
 AAR_SHA256 = "5b3a4c337704b926137c55e1f2d36451bf8a90066a624ce8454752cc5323387b"
 ANDROID = "{http://schemas.android.com/apk/res/android}"

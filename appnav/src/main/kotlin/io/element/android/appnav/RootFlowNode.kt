@@ -34,7 +34,6 @@ import im.vector.app.features.analytics.plan.JoinedRoom
 import io.element.android.annotations.ContributesNode
 import io.element.android.appnav.intent.IntentResolver
 import io.element.android.appnav.intent.ResolvedIntent
-import io.element.android.appnav.room.RoomFlowNode
 import io.element.android.appnav.room.RoomNavigationTarget
 import io.element.android.appnav.root.RootNavStateFlowFactory
 import io.element.android.appnav.root.RootPresenter
@@ -57,10 +56,7 @@ import io.element.android.libraries.deeplink.api.DeeplinkData
 import io.element.android.libraries.di.annotations.AppCoroutineScope
 import io.element.android.libraries.featureflag.api.FeatureFlagService
 import io.element.android.libraries.featureflag.api.FeatureFlags
-import io.element.android.libraries.matrix.api.core.EventId
 import io.element.android.libraries.matrix.api.core.SessionId
-import io.element.android.libraries.matrix.api.core.ThreadId
-import io.element.android.libraries.matrix.api.core.asEventId
 import io.element.android.libraries.matrix.api.core.toRoomIdOrAlias
 import io.element.android.libraries.matrix.api.permalink.PermalinkData
 import io.element.android.libraries.oauth.api.OAuthAction
@@ -499,29 +495,18 @@ class RootFlowNode(
             is PermalinkData.FallbackLink -> Unit
             is PermalinkData.RoomEmailInviteLink -> Unit
             is PermalinkData.RoomLink -> {
-                // If there is a thread id, focus on it in the main timeline
-                val focusedEventId = if (permalinkData.threadId != null) {
-                    permalinkData.threadId?.asEventId()
-                } else {
-                    permalinkData.eventId
-                }
                 attachRoom(
                     roomIdOrAlias = permalinkData.roomIdOrAlias,
                     trigger = JoinedRoom.Trigger.MobilePermalink,
                     serverNames = permalinkData.viaParameters,
-                    initialElement = RoomNavigationTarget.Root(eventId = focusedEventId),
+                    initialElement = permalinkData.threadId?.let { RoomNavigationTarget.Thread(it, permalinkData.eventId) }
+                        ?: RoomNavigationTarget.Root(eventId = permalinkData.eventId),
                     clearBackstack = true
-                ).maybeAttachThread(permalinkData.threadId, permalinkData.eventId)
+                )
             }
             is PermalinkData.UserLink -> {
                 attachUser(permalinkData.userId)
             }
-        }
-    }
-
-    private suspend fun RoomFlowNode.maybeAttachThread(threadId: ThreadId?, focusedEventId: EventId?) {
-        if (threadId != null) {
-            attachThread(threadId, focusedEventId)
         }
     }
 
@@ -533,9 +518,10 @@ class RootFlowNode(
                 is DeeplinkData.Room -> {
                     loggedInFlowNode.attachRoom(
                         roomIdOrAlias = deeplinkData.roomId.toRoomIdOrAlias(),
-                        initialElement = RoomNavigationTarget.Root(eventId = deeplinkData.threadId?.asEventId() ?: deeplinkData.eventId),
+                        initialElement = deeplinkData.threadId?.let { RoomNavigationTarget.Thread(it, deeplinkData.eventId) }
+                            ?: RoomNavigationTarget.Root(eventId = deeplinkData.eventId),
                         clearBackstack = true,
-                    ).maybeAttachThread(deeplinkData.threadId, deeplinkData.eventId)
+                    )
                 }
             }
         }
