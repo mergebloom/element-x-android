@@ -354,6 +354,22 @@
         "EC-005"
       ],
       "role": "test"
+    },
+    {
+      "path": ".github/workflows/composer-validation.yml",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "role": "validation"
+    },
+    {
+      "path": "tools/composer-validation.init.gradle",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "role": "validation"
     }
   ]
 }

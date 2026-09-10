@@ -1,0 +1,67 @@
+name: Safe composer validation
+
+on:
+  push:
+    branches: [composer-safe-drafts]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: safe-composer-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  JAVA_TOOL_OPTIONS: -XX:ActiveProcessorCount=2
+  CARGO_BUILD_JOBS: 2
+  CARGO_PROFILE_DEV_DEBUG: 0
+  CARGO_PROFILE_DEV_INCREMENTAL: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Materialize pinned media fixtures
+        run: git lfs pull --include='libraries/mediaupload/impl/src/test/assets/**' --exclude=''
+      - name: Build the real pinned rich-editor host runtime
+        run: |
+          git clone --filter=blob:none https://github.com/element-hq/matrix-rich-text-editor.git "$RUNNER_TEMP/rich-editor"
+          git -C "$RUNNER_TEMP/rich-editor" checkout --detach 81735076261fc9c2be2e60a888e66cf5b603ee6f
+          test "$(git -C "$RUNNER_TEMP/rich-editor" rev-parse HEAD)" = 81735076261fc9c2be2e60a888e66cf5b603ee6f
+          cd "$RUNNER_TEMP/rich-editor"
+          cargo +stable build --locked -p uniffi-wysiwyg-composer
+          mkdir -p "$GITHUB_WORKSPACE/validation-evidence"
+          sha256sum target/debug/libuniffi_wysiwyg_composer.so > "$GITHUB_WORKSPACE/validation-evidence/rich-host.sha256"
+          rustc +stable --version > "$GITHUB_WORKSPACE/validation-evidence/rust-version.txt"
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+      - name: Run all changed module tests and genuine native Compose captures
+        run: |
+          git rev-parse HEAD > validation-evidence/source-sha.txt
+          ./gradlew :libraries:mediaupload:impl:testDebugUnitTest :libraries:voicerecorder:impl:testDebugUnitTest :libraries:textcomposer:impl:testDebugUnitTest :features:messages:impl:testDebugUnitTest --continue --stacktrace --no-configuration-cache --no-parallel --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process -Dorg.gradle.jvmargs='-Xmx3g -XX:MaxMetaspaceSize=1g -XX:ActiveProcessorCount=2' -I tools/composer-validation.init.gradle -Proborazzi.test.record=true -Proborazzi.test.verify=false 2>&1 | tee validation-evidence/gradle.log
+      - name: Check changed module Kotlin style
+        if: success() || failure()
+        run: ./gradlew :libraries:textcomposer:impl:ktlintCheck :features:messages:impl:ktlintCheck :libraries:mediaupload:impl:ktlintCheck :libraries:voicerecorder:impl:ktlintCheck --no-configuration-cache --no-parallel --max-workers=2 -Dorg.gradle.jvmargs='-Xmx2g -XX:ActiveProcessorCount=2'
+      - name: Preserve exact-source evidence including failures
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: safe-composer-${{ github.sha }}
+          path: |
+            validation-evidence/
+            libraries/mediaupload/impl/build/test-results/
+            libraries/voicerecorder/impl/build/test-results/
+            libraries/textcomposer/impl/build/test-results/
+            features/messages/impl/build/test-results/
+            libraries/textcomposer/impl/build/outputs/*screenshots/
+            features/messages/impl/build/outputs/*screenshots/
+            **/build/reports/ktlint/
+          if-no-files-found: error
