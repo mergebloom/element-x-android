@@ -4,8 +4,8 @@
     <string name="screen_caption_plain_text">Captions use plain text. Cancelling without caption changes keeps the original formatting.</string>
     <string name="screen_caption_draft_conflict_title">Keep your attachment draft?</string>
     <string name="screen_caption_draft_conflict_body">Your message draft has changed. Keep editing this attachment, or discard it and keep your current message. Neither draft will be overwritten.</string>
-    <string name="screen_caption_discard_attachment">Discard attachment draft</string>
-    <string name="screen_caption_keep_editing">Keep editing attachment</string>
+    <string name="screen_caption_discard_attachment">Discard draft</string>
+    <string name="screen_caption_keep_editing">Keep editing</string>
     <string name="screen_voice_ready">Microphone ready. Tap or hold to record.</string>
     <string name="screen_voice_error">Recording could not start. Your message draft is safe. Try again.</string>
     <string name="screen_voice_leave_title">Keep this voice draft?</string>

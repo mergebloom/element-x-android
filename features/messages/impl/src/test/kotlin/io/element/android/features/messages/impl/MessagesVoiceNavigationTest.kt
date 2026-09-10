@@ -138,8 +138,12 @@ class MessagesVoiceNavigationTest : RobolectricTest() {
                 assertThat(threadRootId).isEqualTo(ThreadId("\$other-thread"))
                 destinations += "thread"
             }
-            override fun handlePermalinkClick(data: PermalinkData) { destinations += "room" }
-            override fun navigateToRoomMemberDetails(userId: UserId) { destinations += "member" }
+            override fun handlePermalinkClick(data: PermalinkData) {
+                destinations += "room"
+            }
+            override fun navigateToRoomMemberDetails(userId: UserId) {
+                destinations += "member"
+            }
         }
         val node = ThreadedMessagesNode(
             buildContext = BuildContext.root(null),
@@ -196,8 +200,12 @@ class MessagesVoiceNavigationTest : RobolectricTest() {
                 assertThat(threadRootId).isEqualTo(ROOT.toThreadId())
                 destinations += "thread"
             }
-            override fun navigateToRoomMemberDetails(userId: UserId) { destinations += "member" }
-            override fun handlePermalinkClick(data: PermalinkData) { destinations += "room" }
+            override fun navigateToRoomMemberDetails(userId: UserId) {
+                destinations += "member"
+            }
+            override fun handlePermalinkClick(data: PermalinkData) {
+                destinations += "room"
+            }
         }
         val node = MessagesNode(
             buildContext = BuildContext.root(null),
