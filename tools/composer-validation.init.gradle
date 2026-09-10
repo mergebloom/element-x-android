@@ -3,8 +3,10 @@
 allprojects {
     tasks.withType(Test).configureEach {
         maxParallelForks = 1
-        maxHeapSize = '1g'
-        jvmArgs '-XX:ActiveProcessorCount=2'
+        // Home captures all 32 large-font/theme states in one native Compose test.
+        // Preserve its upstream 2g budget; forcing 1g exhausts Robolectric ShadowTrace.
+        maxHeapSize = project.path == ':features:home:impl' ? '2g' : '1g'
+        jvmArgs '-XX:ActiveProcessorCount=2', '-XX:+ExitOnOutOfMemoryError'
         def nativeDir = new File(System.getenv('RUNNER_TEMP'), 'rich-editor/target/debug').absolutePath
         systemProperty 'jna.boot.library.path', nativeDir
         systemProperty 'jna.library.path', nativeDir
