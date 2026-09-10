@@ -15,8 +15,7 @@ import com.google.common.truth.Truth.assertThat
 import io.element.android.libraries.preferences.api.store.VideoCompressionPreset
 import io.element.android.tests.testutils.robolectric.RobolectricTest
 import io.mockk.every
-import io.mockk.mockkConstructor
-import io.mockk.unmockkConstructor
+import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancelAndJoin
@@ -35,7 +34,7 @@ class VideoCompressorCancellationTest : RobolectricTest() {
     @Test
     fun `cancel joins native export before retry and removes only its partial file`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
-        mockkConstructor(Transformer::class)
+        val transformer = mockk<Transformer>()
         val context = RuntimeEnvironment.getApplication()
         val source = File(context.cacheDir, "synthetic-video-source.mp4").apply { writeText("retained source") }
         val other = File(context.cacheDir, "another-upload.mp4").apply { writeText("another active attempt") }
@@ -43,16 +42,16 @@ class VideoCompressorCancellationTest : RobolectricTest() {
         var cancellations = 0
         val started = CompletableDeferred<Unit>()
         try {
-            every { anyConstructed<Transformer>().start(any<EditedMediaItem>(), any()) } answers {
+            every { transformer.start(any<EditedMediaItem>(), any()) } answers {
                 files += File(secondArg<String>()).apply { writeText("partial export") }
                 started.complete(Unit)
             }
-            every { anyConstructed<Transformer>().getProgress(any()) } returns Transformer.PROGRESS_STATE_NOT_STARTED
-            every { anyConstructed<Transformer>().cancel() } answers {
+            every { transformer.getProgress(any()) } returns Transformer.PROGRESS_STATE_NOT_STARTED
+            every { transformer.cancel() } answers {
                 assertThat(Looper.myLooper()).isEqualTo(Looper.getMainLooper())
                 cancellations++
             }
-            val compressor = VideoCompressor(context)
+            val compressor = VideoCompressor(context) { transformer }
             val first = launch { compressor.compress(Uri.fromFile(source), VideoCompressionPreset.STANDARD).collect() }
             started.await()
             first.cancelAndJoin()
@@ -69,7 +68,6 @@ class VideoCompressorCancellationTest : RobolectricTest() {
             assertThat(source.readText()).isEqualTo("retained source")
             assertThat(other.readText()).isEqualTo("another active attempt")
         } finally {
-            unmockkConstructor(Transformer::class)
             Dispatchers.resetMain()
         }
     }

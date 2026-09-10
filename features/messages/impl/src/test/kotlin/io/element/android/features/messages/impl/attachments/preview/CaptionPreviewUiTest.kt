@@ -27,8 +27,10 @@ import io.element.android.features.messages.impl.R
 import io.element.android.libraries.textcomposer.model.aTextEditorStateMarkdown
 import io.element.android.libraries.ui.strings.CommonStrings
 import io.element.android.tests.testutils.robolectric.RobolectricTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
@@ -37,11 +39,14 @@ import java.io.File
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [35], qualifiers = "w320dp-h640dp-mdpi")
 class CaptionPreviewUiTest : RobolectricTest() {
+    @After fun resetSystemFontScale() { RuntimeEnvironment.setFontScale(1f) }
     @Test
     fun `capture editable caption conversion conflict and retry with accessible controls`() {
         val directory = File("build/outputs/caption-screenshots").apply { mkdirs() }
         listOf(false, true).forEach { dark ->
             listOf(1f, 2f).forEach { scale ->
+                // Dialog windows read Android configuration, not the parent LocalDensity.
+                RuntimeEnvironment.setFontScale(scale)
                 runAndroidComposeUiTest<ComponentActivity> {
                     val events = mutableListOf<AttachmentsPreviewEvent>()
                     val state = mutableStateOf(

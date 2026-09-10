@@ -49,10 +49,13 @@ import timber.log.Timber
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
-@Inject
-class VideoCompressor(
-    @ApplicationContext private val context: Context,
+class VideoCompressor internal constructor(
+    private val context: Context,
+    private val transformerFactory: (Transformer.Builder) -> Transformer,
 ) {
+    @Inject
+    constructor(@ApplicationContext context: Context) : this(context, { it.build() })
+
     @OptIn(UnstableApi::class)
     fun compress(uri: Uri, videoCompressionPreset: VideoCompressionPreset): Flow<VideoTranscodingEvent> = callbackFlow {
         val metadata = getVideoMetadata(uri)
@@ -113,7 +116,7 @@ class VideoCompressor(
             .build()
 
         val outputTransferred = AtomicBoolean(false)
-        val videoTransformer = Transformer.Builder(context)
+        val videoTransformer = transformerFactory(Transformer.Builder(context)
             .setVideoMimeType(MimeTypes.VIDEO_H264)
             .setAudioMimeType(MimeTypes.AUDIO_AAC)
             .setPortraitEncodingEnabled(false)
@@ -136,8 +139,7 @@ class VideoCompressor(
                     originalTransformationRequest: TransformationRequest,
                     fallbackTransformationRequest: TransformationRequest
                 ) = Unit
-            })
-            .build()
+            }))
 
         val progressJob = launch(Dispatchers.Main) {
             val progressHolder = ProgressHolder()

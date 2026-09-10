@@ -56,8 +56,8 @@ import io.element.android.tests.testutils.robolectric.RobolectricTest
 import io.element.android.tests.testutils.setSafeContent
 import io.element.android.wysiwyg.link.Link
 import io.mockk.every
-import io.mockk.registerInstanceFactory
 import io.mockk.mockk
+import io.mockk.registerInstanceFactory
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.test.TestScope
 import org.junit.Test

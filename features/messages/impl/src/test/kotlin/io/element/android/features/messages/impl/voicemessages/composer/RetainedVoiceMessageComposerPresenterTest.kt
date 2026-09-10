@@ -12,11 +12,6 @@ package io.element.android.features.messages.impl.voicemessages.composer
 import android.Manifest
 import android.media.AudioManager
 import androidx.core.content.getSystemService
-import io.element.android.libraries.audio.api.AudioFocus
-import io.element.android.libraries.audio.impl.DefaultAudioFocus
-import io.element.android.tests.testutils.robolectric.RobolectricTest
-import org.robolectric.RuntimeEnvironment
-import org.robolectric.Shadows.shadowOf
 import androidx.lifecycle.Lifecycle
 import app.cash.turbine.TurbineTestContext
 import com.google.common.truth.Truth.assertThat
@@ -24,6 +19,8 @@ import io.element.android.features.messages.api.timeline.voicemessages.composer.
 import io.element.android.features.messages.api.timeline.voicemessages.composer.VoiceMessageComposerState
 import io.element.android.features.messages.impl.messagecomposer.aReplyMode
 import io.element.android.features.messages.test.FakeMessageComposerContext
+import io.element.android.libraries.audio.api.AudioFocus
+import io.element.android.libraries.audio.impl.DefaultAudioFocus
 import io.element.android.libraries.matrix.api.core.EventId
 import io.element.android.libraries.matrix.api.core.ThreadId
 import io.element.android.libraries.matrix.api.media.AudioInfo
@@ -51,11 +48,12 @@ import io.element.android.libraries.voicerecorder.api.VoiceRecorder
 import io.element.android.libraries.voicerecorder.api.VoiceRecorderState
 import io.element.android.services.analytics.test.FakeAnalyticsService
 import io.element.android.tests.testutils.WarmUpRule
+import io.element.android.tests.testutils.robolectric.RobolectricTest
 import io.element.android.tests.testutils.test
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.registerInstanceFactory
 import io.mockk.mockk
+import io.mockk.registerInstanceFactory
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -65,6 +63,8 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import java.io.File
 import kotlin.time.Duration.Companion.seconds
 
