@@ -90,8 +90,13 @@ class CaptionPreviewUiTest : RobolectricTest() {
                             sendActionState = SendActionState.Failure(IllegalStateException("Synthetic failure"), emptyList()),
                         )
                     }
+                    waitForIdle()
+                    onNodeWithText(activity!!.getString(R.string.screen_caption_draft_conflict_title)).assertDoesNotExist()
+                    onNodeWithText(activity!!.getString(CommonStrings.action_retry)).assertIsDisplayed()
                     onRoot().captureRoboImage(File(directory, "caption-$dark-$scale-retry.png").path)
                     assertEquals(0, events.count { it == AttachmentsPreviewEvent.SendAttachment })
+                    onNodeWithText(activity!!.getString(CommonStrings.action_retry)).performClick()
+                    assertEquals(1, events.count { it == AttachmentsPreviewEvent.SendAttachment })
                 }
             }
         }
