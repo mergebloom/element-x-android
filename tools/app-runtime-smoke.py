@@ -166,11 +166,19 @@ def main():
                 time.sleep(.5)
         else:
             raise RuntimeError('Fixture did not start')
+        check('disposable-fixture-ready', True)
         fixture = control('new', {'root_count': 1})
         # Previous public universal supports x86_64; exact immutable bytes checked before use.
         old = Path(os.environ['RUNNER_TEMP']) / 'prior-universal.apk'
         url = 'https://github.com/mergebloom/element-x-android/releases/download/reasoning-26.09.1-r1-debug/elementx-reasoning-26.09.1-r1-universal-debug.apk'
-        urllib.request.urlretrieve(url, old)
+        # Public immutable download only. Bound transient redirect/TLS resets without
+        # disabling certificate validation, following non-HTTPS redirects or weakening the digest.
+        fetch = subprocess.run([
+            'curl', '--fail', '--location', '--retry', '2', '--retry-all-errors', '--retry-delay', '2',
+            '--connect-timeout', '20', '--max-time', '240', '--proto', '=https', '--proto-redir', '=https',
+            '--silent', '--show-error', '--output', str(old), url,
+        ], capture_output=True, timeout=750)
+        check('prior-immutable-apk-download', fetch.returncode == 0)
         with old.open('rb') as f:
             assert hashlib.file_digest(f, 'sha256').hexdigest() == 'b2c08f70ffc7ae9412ae8bb21be0390f05bcce6d1dc1eb7a9352ce00c3f04029'
         assert b'Success' in adb('install', str(old))
