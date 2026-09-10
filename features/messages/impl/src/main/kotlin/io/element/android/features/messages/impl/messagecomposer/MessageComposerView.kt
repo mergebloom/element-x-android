@@ -13,7 +13,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -72,12 +74,13 @@ internal fun MessageComposerView(
         state.eventSink(MessageComposerEvent.Error(error))
     }
 
+    val latestEventSink by rememberUpdatedState(state.eventSink)
     fun onTyping(typing: Boolean) {
         // Both editor implementations call this from their unthrottled TextWatcher,
         // including deletion/undo/format changes. Never couple draft ownership to
         // whether the room sends or debounces a network typing notice.
-        state.eventSink(MessageComposerEvent.InputChanged)
-        state.eventSink(MessageComposerEvent.TypingNotice(typing))
+        latestEventSink(MessageComposerEvent.InputChanged)
+        latestEventSink(MessageComposerEvent.TypingNotice(typing))
     }
 
     val coroutineScope = rememberCoroutineScope()

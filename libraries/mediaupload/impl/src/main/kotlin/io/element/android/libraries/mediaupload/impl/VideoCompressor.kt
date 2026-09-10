@@ -116,30 +116,32 @@ class VideoCompressor internal constructor(
             .build()
 
         val outputTransferred = AtomicBoolean(false)
-        val videoTransformer = transformerFactory(Transformer.Builder(context)
-            .setVideoMimeType(MimeTypes.VIDEO_H264)
-            .setAudioMimeType(MimeTypes.AUDIO_AAC)
-            .setPortraitEncodingEnabled(false)
-            .setEncoderFactory(encoderFactory)
-            .setMuxerFactory(removeMetadataMuxer)
-            .addListener(object : Transformer.Listener {
-                override fun onCompleted(composition: Composition, exportResult: ExportResult) {
-                    outputTransferred.set(trySend(VideoTranscodingEvent.Completed(tmpFile)).isSuccess)
-                    close()
-                }
+        val videoTransformer = transformerFactory(
+            Transformer.Builder(context)
+                .setVideoMimeType(MimeTypes.VIDEO_H264)
+                .setAudioMimeType(MimeTypes.AUDIO_AAC)
+                .setPortraitEncodingEnabled(false)
+                .setEncoderFactory(encoderFactory)
+                .setMuxerFactory(removeMetadataMuxer)
+                .addListener(object : Transformer.Listener {
+                    override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                        outputTransferred.set(trySend(VideoTranscodingEvent.Completed(tmpFile)).isSuccess)
+                        close()
+                    }
 
-                override fun onError(composition: Composition, exportResult: ExportResult, exportException: ExportException) {
-                    Timber.e(exportException, "Video transcoding failed")
-                    tmpFile.safeDelete()
-                    close(exportException)
-                }
+                    override fun onError(composition: Composition, exportResult: ExportResult, exportException: ExportException) {
+                        Timber.e(exportException, "Video transcoding failed")
+                        tmpFile.safeDelete()
+                        close(exportException)
+                    }
 
-                override fun onFallbackApplied(
-                    composition: Composition,
-                    originalTransformationRequest: TransformationRequest,
-                    fallbackTransformationRequest: TransformationRequest
-                ) = Unit
-            }))
+                    override fun onFallbackApplied(
+                        composition: Composition,
+                        originalTransformationRequest: TransformationRequest,
+                        fallbackTransformationRequest: TransformationRequest
+                    ) = Unit
+                })
+        )
 
         val progressJob = launch(Dispatchers.Main) {
             val progressHolder = ProgressHolder()

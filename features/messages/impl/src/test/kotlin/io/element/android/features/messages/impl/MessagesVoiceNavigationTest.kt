@@ -133,10 +133,14 @@ class MessagesVoiceNavigationTest : RobolectricTest() {
     @Test
     fun `thread node shares guard for resolved thread room and member destinations`() = runAndroidComposeUiTest<ComponentActivity> {
         val destinations = mutableListOf<String>()
-        val callback = mockk<ThreadedMessagesNode.Callback>(relaxed = true)
-        every { callback.navigateToThread(any(), any()) } answers { destinations += "thread" }
-        every { callback.handlePermalinkClick(any()) } answers { destinations += "room" }
-        every { callback.navigateToRoomMemberDetails(any()) } answers { destinations += "member" }
+        val callback = object : ThreadedMessagesNode.Callback by mockk(relaxed = true) {
+            override fun navigateToThread(threadRootId: ThreadId, focusedEventId: EventId?) {
+                assertThat(threadRootId).isEqualTo(ThreadId("\$other-thread"))
+                destinations += "thread"
+            }
+            override fun handlePermalinkClick(data: PermalinkData) { destinations += "room" }
+            override fun navigateToRoomMemberDetails(userId: UserId) { destinations += "member" }
+        }
         val node = ThreadedMessagesNode(
             buildContext = BuildContext.root(null),
             plugins = listOf(ThreadedMessagesNode.Inputs(ROOT.toThreadId(), null), callback),
@@ -187,10 +191,13 @@ class MessagesVoiceNavigationTest : RobolectricTest() {
         private var linkClick by mutableStateOf<AsyncAction<Link>>(AsyncAction.Uninitialized)
         private var showReceipt by mutableStateOf(false)
         private val parser = FakePermalinkParser()
-        private val callback = mockk<MessagesNode.Callback>(relaxed = true).apply {
-            every { navigateToThread(any(), any()) } answers { destinations += "thread" }
-            every { navigateToRoomMemberDetails(any()) } answers { destinations += "member" }
-            every { handlePermalinkClick(any()) } answers { destinations += "room" }
+        private val callback = object : MessagesNode.Callback by mockk(relaxed = true) {
+            override fun navigateToThread(threadRootId: ThreadId, focusedEventId: EventId?) {
+                assertThat(threadRootId).isEqualTo(ROOT.toThreadId())
+                destinations += "thread"
+            }
+            override fun navigateToRoomMemberDetails(userId: UserId) { destinations += "member" }
+            override fun handlePermalinkClick(data: PermalinkData) { destinations += "room" }
         }
         val node = MessagesNode(
             buildContext = BuildContext.root(null),

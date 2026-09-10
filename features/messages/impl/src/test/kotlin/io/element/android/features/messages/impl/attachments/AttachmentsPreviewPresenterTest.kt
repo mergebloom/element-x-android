@@ -465,7 +465,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.ReadyToUpload(listOf(mediaUploadInfo)))
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Uploading(listOf(mediaUploadInfo)))
             initialState.eventSink(AttachmentsPreviewEvent.CancelAndClearSendState)
-            assertThat(awaitLastSequentialItem().sendActionState).isEqualTo(SendActionState.Idle)
+            assertThat(consumeItemsUntilPredicate { it.sendActionState == SendActionState.Idle }.sendActionState).isEqualTo(SendActionState.Idle)
             // Retry must prepare fresh files; the native handler may delete its old files.
             ensureAllEventsConsumed()
         }

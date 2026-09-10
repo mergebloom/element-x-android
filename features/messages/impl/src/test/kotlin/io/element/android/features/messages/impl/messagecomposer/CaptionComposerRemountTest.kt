@@ -155,14 +155,16 @@ class CaptionComposerRemountTest : RobolectricTest() {
         }
         var visible by mutableStateOf(true)
         var disposals = 0
+        var current by mutableStateOf<MessageComposerState?>(null)
         moleculeFlow(RecompositionMode.Immediate) {
             val holder = rememberSaveableStateHolder()
-            var current: MessageComposerState? = null
             if (visible) {
                 holder.SaveableStateProvider("original-composer") {
                     DisposableEffect(Unit) { onDispose { disposals++ } }
                     current = composer.present()
                 }
+            } else {
+                current = null
             }
             current
         }.test {

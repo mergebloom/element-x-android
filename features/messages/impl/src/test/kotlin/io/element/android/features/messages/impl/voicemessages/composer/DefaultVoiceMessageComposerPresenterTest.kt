@@ -136,7 +136,7 @@ class DefaultVoiceMessageComposerPresenterTest {
             awaitState { it.voiceMessageState == RECORDING_STATE }.eventSink(VoiceMessageComposerEvent.RecorderEvent(VoiceMessageRecorderEvent.Stop))
             messageComposerContext.composerMode = MessageComposerMode.Normal
             awaitState { it.voiceMessageState is VoiceMessageState.Preview }.eventSink(VoiceMessageComposerEvent.SendVoiceMessage)
-            advanceUntilIdle()
+            awaitState { it.voiceMessageState == VoiceMessageState.Idle }
             sendVoiceMessageResult.assertions().isCalledOnce().with(any(), any(), any(), value(AN_EVENT_ID))
             cancelAndIgnoreRemainingEvents()
         }
@@ -514,10 +514,10 @@ class DefaultVoiceMessageComposerPresenterTest {
             awaitState { it.voiceMessageState == RECORDING_STATE }.eventSink(VoiceMessageComposerEvent.RecorderEvent(VoiceMessageRecorderEvent.Stop))
             awaitState { it.voiceMessageState is VoiceMessageState.Preview }.eventSink(VoiceMessageComposerEvent.PlayerEvent(VoiceMessagePlayerEvent.Play))
             awaitState { it.voiceMessageState == aPlayingState() }.eventSink(VoiceMessageComposerEvent.SendVoiceMessage)
-            assertThat(awaitItem().voiceMessageState).isEqualTo(aPlayingState().toSendingState())
-            skipItems(1) // Duplicate sending state
+            assertThat(awaitState { it.voiceMessageState == aPlayingState().toSendingState() }.voiceMessageState)
+                .isEqualTo(aPlayingState().toSendingState())
 
-            val finalState = awaitItem()
+            val finalState = awaitState { it.voiceMessageState == VoiceMessageState.Idle }
             assertThat(finalState.voiceMessageState).isEqualTo(VoiceMessageState.Idle)
             sendVoiceMessageResult.assertions().isCalledOnce()
             startRecordResult.assertions().isCalledOnce()
