@@ -1,0 +1,175 @@
+name: Integrated Android candidate
+on:
+  push:
+    branches: [integration/four-feature-candidate]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: integrated-candidate-${{ github.ref }}
+  cancel-in-progress: false
+env:
+  JAVA_TOOL_OPTIONS: -XX:ActiveProcessorCount=2
+  CARGO_BUILD_JOBS: 2
+  CARGO_PROFILE_DEV_DEBUG: 0
+  CARGO_PROFILE_DEV_INCREMENTAL: false
+jobs:
+  tests:
+    name: Combined production regressions and genuine Compose captures
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Materialize pinned media fixtures and real rich-editor host runtime
+        run: |
+          git lfs pull --include='libraries/mediaupload/impl/src/test/assets/**' --exclude=''
+          git clone --filter=blob:none https://github.com/element-hq/matrix-rich-text-editor.git "$RUNNER_TEMP/rich-editor"
+          git -C "$RUNNER_TEMP/rich-editor" checkout --detach 81735076261fc9c2be2e60a888e66cf5b603ee6f
+          cd "$RUNNER_TEMP/rich-editor"
+          cargo +stable build --locked -p uniffi-wysiwyg-composer
+          curl --fail --location https://repo.maven.apache.org/maven2/net/java/dev/jna/jna/5.18.1/jna-5.18.1.jar -o "$RUNNER_TEMP/jna-host.jar"
+          python3 -c 'import hashlib,os,pathlib,zipfile; p=pathlib.Path(os.environ["RUNNER_TEMP"])/"jna-host.jar"; assert hashlib.sha256(p.read_bytes()).hexdigest()=="260c4b1e22b1db9e110ee441c4f13ce115f841fa48c41d78750986214b395557"; (pathlib.Path("target/debug")/"libjnidispatch.so").write_bytes(zipfile.ZipFile(p).read("com/sun/jna/linux-x86-64/libjnidispatch.so"))'
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      - name: Run combined suites with fail-closed pipeline
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p validation-evidence
+          git rev-parse HEAD > validation-evidence/source-sha.txt
+          python3 -B -m unittest discover -s intent -p 'test_*.py' -v
+          ./gradlew :libraries:audio:impl:testDebugUnitTest :libraries:mediaupload:impl:testDebugUnitTest :libraries:voicerecorder:impl:testDebugUnitTest :libraries:textcomposer:impl:testDebugUnitTest :features:messages:impl:testDebugUnitTest :libraries:matrix:impl:testDebugUnitTest :features:home:impl:testDebugUnitTest :appnav:testDebugUnitTest --continue --stacktrace --no-configuration-cache --no-parallel --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process -Dorg.gradle.jvmargs='-Xmx3g -XX:MaxMetaspaceSize=1g -XX:ActiveProcessorCount=2' -I tools/composer-validation.init.gradle -Proborazzi.test.record=true -Proborazzi.test.verify=false 2>&1 | tee validation-evidence/gradle.log
+      - name: Independently reject missing failed or unexpected skipped cases
+        if: success() || failure()
+        run: python3 tools/check-integrated-tests.py
+      - name: Kotlin style
+        if: success() || failure()
+        run: ./gradlew :libraries:audio:impl:ktlintCheck :libraries:textcomposer:impl:ktlintCheck :features:messages:impl:ktlintCheck :libraries:mediaupload:impl:ktlintCheck :libraries:voicerecorder:impl:ktlintCheck :libraries:matrix:impl:ktlintCheck :features:home:impl:ktlintCheck :appnav:ktlintCheck --no-configuration-cache --no-parallel --max-workers=2 -Dorg.gradle.jvmargs='-Xmx2g -XX:ActiveProcessorCount=2'
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: integrated-tests-${{ github.sha }}
+          path: |
+            validation-evidence/
+            libraries/audio/impl/build/test-results/
+            libraries/mediaupload/impl/build/test-results/
+            libraries/voicerecorder/impl/build/test-results/
+            libraries/textcomposer/impl/build/test-results/
+            features/messages/impl/build/test-results/
+            libraries/matrix/impl/build/test-results/
+            features/home/impl/build/test-results/
+            appnav/build/test-results/
+            libraries/textcomposer/impl/build/outputs/*screenshots/
+            features/messages/impl/build/outputs/*screenshots/
+            features/home/impl/build/outputs/threads-screenshots/
+            **/build/reports/ktlint/
+          if-no-files-found: error
+  build:
+    name: Frozen app and native fixture APKs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92
+      - name: Build full application and self-instrumenting native library
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p candidate-evidence
+          git rev-parse HEAD > candidate-evidence/source-sha.txt
+          ./gradlew :app:assembleGplayDebug :libraries:matrix:impl:assembleDebugAndroidTest --stacktrace --no-daemon --no-configuration-cache --no-parallel --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process -Dorg.gradle.jvmargs='-Xmx3g -XX:MaxMetaspaceSize=1g -XX:ActiveProcessorCount=2' 2>&1 | tee candidate-evidence/build.log
+      - name: Inspect APK identities and embedded revisions
+        run: |
+          python3 -m venv "$RUNNER_TEMP/apk-inspect"
+          "$RUNNER_TEMP/apk-inspect/bin/pip" install 'androguard==4.1.4'
+          "$RUNNER_TEMP/apk-inspect/bin/python" tools/candidate-apk-metadata.py --sha "$GITHUB_SHA" --out candidate-evidence/apks.json --apk app/build/outputs/apk/gplay/debug/app-gplay-arm64-v8a-debug.apk --apk app/build/outputs/apk/gplay/debug/app-gplay-x86_64-debug.apk --apk app/build/outputs/apk/gplay/debug/app-gplay-universal-debug.apk
+          python3 scripts/threads-native/evidence.py package --sha "$GITHUB_SHA"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: candidate-arm64-${{ github.sha }}
+          path: app/build/outputs/apk/gplay/debug/app-gplay-arm64-v8a-debug.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: candidate-universal-${{ github.sha }}
+          path: app/build/outputs/apk/gplay/debug/app-gplay-universal-debug.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: candidate-runtime-${{ github.sha }}
+          path: |
+            app/build/outputs/apk/gplay/debug/app-gplay-x86_64-debug.apk
+            native-handoff/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: candidate-build-evidence-${{ github.sha }}
+          path: candidate-evidence/
+          if-no-files-found: error
+  runtime:
+    name: Disposable full-app smoke and pinned native receipt proof
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      EXPECTED_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: candidate-runtime-${{ github.sha }}
+      - name: Install same-run fixture dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/threads-synapse-venv"
+          "$RUNNER_TEMP/threads-synapse-venv/bin/pip" install --no-cache-dir 'matrix-synapse==1.160.0'
+      - name: Enable hosted KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          sudo udevadm settle --timeout=15
+          test -r /dev/kvm && test -w /dev/kvm
+      - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7_pro
+          disk-size: 3G
+          disable-animations: true
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            bash scripts/threads-native/run-emulator.sh
+            python3 tools/app-runtime-smoke.py
+      - name: Check native expected nonzero cases
+        if: always()
+        run: python3 scripts/threads-native/evidence.py verify --sha "$EXPECTED_SHA"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: candidate-runtime-evidence-${{ github.sha }}
+          path: |
+            native-evidence/*.json
+            native-evidence/junit.xml
+            app-runtime-evidence/
+          if-no-files-found: error

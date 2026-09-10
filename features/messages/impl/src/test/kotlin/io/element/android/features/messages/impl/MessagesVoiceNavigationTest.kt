@@ -144,6 +144,8 @@ class MessagesVoiceNavigationTest : RobolectricTest() {
                 destinations += "member"
             }
         }
+        val sameRoomLink = PermalinkData.RoomLink(io.element.android.libraries.matrix.test.A_ROOM_ID.toRoomIdOrAlias(), null)
+        val parser = FakePermalinkParser().apply { givenResult(sameRoomLink) }
         val node = ThreadedMessagesNode(
             buildContext = BuildContext.root(null),
             plugins = listOf(ThreadedMessagesNode.Inputs(ROOT.toThreadId(), null), callback),
@@ -154,8 +156,9 @@ class MessagesVoiceNavigationTest : RobolectricTest() {
             presenterFactory = mockk(relaxed = true),
             actionListPresenterFactory = mockk(relaxed = true),
             timelineItemPresenterFactories = mockk(relaxed = true),
-            permalinkParser = FakePermalinkParser(),
+            permalinkParser = parser,
             appNavigationStateService = mockk(relaxed = true),
+            threadTimelineLoader = mockk(relaxed = true),
             roomMemberModerationRenderer = mockk(relaxed = true),
             emojiPickerRenderer = mockk(relaxed = true),
         )
@@ -165,6 +168,7 @@ class MessagesVoiceNavigationTest : RobolectricTest() {
             "thread" to { node.navigateToThread(ThreadId("\$other-thread"), null) },
             "room" to { node.navigateToRoom(RoomId("!other:example.org"), null, emptyList()) },
             "member" to { node.navigateToMember(MEMBER) },
+            "room" to { node.onLinkClick(activity!!, false, "https://matrix.to/#/same-room", {}, true) },
         )) {
             guard.update(state)
             navigate()
