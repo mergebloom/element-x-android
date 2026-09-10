@@ -1,6 +1,7 @@
 # Pinned Android native thread-receipt fixture
 
-**Status: implementation ready for hosted execution; no Android/emulator test has been executed locally.**
+**Execution: hosted Android/KVM instrumentation; no local emulator execution is claimed.**
+Read the exact-commit Actions artifact (`results.json`, `build.json`, `junit.xml`) for the current verdict.
 The local server preflight is wire-infrastructure evidence only. It cannot pass this workflow's native gate.
 
 ## Execution
@@ -11,8 +12,7 @@ in a separate Ubuntu 24.04 / API 33 / x86_64 KVM job, without Gradle in the emul
 Both jobs check out and validate the same full commit SHA. No enterprise submodules, credentials,
 real Matrix accounts, existing servers, or full application APK are required.
 
-Parent: commit the scoped fixture files plus the three `androidTestImplementation` additions in
-`libraries/matrix/impl/build.gradle.kts`. Push `feature/threads-directory` once; it triggers the lane.
+Push the reviewed `feature/threads-directory` branch once; it triggers the lane.
 Alternatively dispatch `.github/workflows/threads-native.yml` with `source_sha=<full reviewed SHA>`.
 Avoid a duplicate manual dispatch immediately after a push.
 
@@ -39,7 +39,7 @@ python3 -B scripts/threads-native/evidence.py verify --sha "$EXPECTED_SHA"
 
 ## Required real-native cases
 
-Exactly these **three** JUnit cases must start and pass; zero tests, missing cases, skips, duplicates,
+Exactly these **five** JUnit cases must start and pass; zero tests, missing cases, skips, duplicates,
 crashes, wrong source, wrong native artifact, and absent evidence fail closed:
 
 1. `explicitReceiptsAndOwnLatestSurviveNativeSqliteReopen`: real native Client login, union room subscriptions,
@@ -58,11 +58,20 @@ crashes, wrong source, wrong native artifact, and absent evidence fail closed:
    and thread-order reads in both rooms emit zero receipt/read-marker writes. A deliberate final native
    `Room.sendSingleReceipt` is the **one** required positive-control write.
 
+4. `productionDirectoryResolvesReceiptChangesAcrossRoomsWithoutWriting`: actual new production
+   directory with SSS still active, native v2 sync barrier, cross-room identity, missing evidence,
+   incoming-before-own Unread, private receipt-only Read, unrelated unthreaded anchor, new incoming
+   after that anchor, and zero receipt writes across every scan.
+5. `confirmedNativeTextFileAndVoiceSendsPersistRecentButFailureDoesNot`: actual pinned native thread
+   sends for text, a file, and a WAV voice message; the production account-wide SentEvent observer
+   updates the correct roots in confirmation order. A failed missing-file send leaves Recent unchanged;
+   reopening the device-local Recent file preserves the three confirmed records and stores no bodies.
+
 The fixture uses real server-returned IDs and native timeline diff order, never timestamp sorting,
 notification counts, implicit-own unread counters, or receipt absence => zero.
-Only synthetic unencrypted text is used. Seed messages/receipt mutations use the same-run server's control
-channel; the observations, ordering, pagination, stores, client restore and audit positive control use the AAR.
-This proves neither production send UI behavior nor an application unread reducer merely by naming a native class.
+All data is synthetic and unencrypted. Seed messages/receipts use the same-run control channel;
+observations, pagination, stores, client restore, confirmed sends, production unread adapter,
+and receipt-audit calibration use the actual AAR. Library sends are not whole-app composer UI proof.
 
 ## Native source and artifact binding
 
@@ -76,7 +85,7 @@ This proves neither production send UI behavior nor an application unread reduce
   [`sdk_git_sha`](https://github.com/matrix-org/matrix-rust-sdk/blob/0af7a3217d29c0f92b7cd888772357eff0c57186/bindings/matrix-sdk-ffi/src/lib.rs)
   returns `VERGEN_GIT_SHA`. The verified AAR's actual x86_64 ELF contains `0af7a3217`, not the full SHA.
   The fixture therefore asserts the real `sdkGitSha()` result equals `0af7a3217` at runtime;
-  **that runtime assertion has not yet been executed**.
+  the runtime assertion is part of every executed fixture login.
 - The fixture calls real `initPlatform` once, with system/file tracing disabled and no Sentry config,
   matching the source's Android JNI/Tokio initialization before building clients.
 - APK packaging verifies the original AAR hash and compares x86_64 ELF GNU build ID **plus `.text` and
@@ -110,11 +119,12 @@ No logcat or server log upload is enabled. The parser unit tests include secret-
 
 `NativeThreadFixture.create()` / `login()` / `reopen()` expose genuine `NativeFixtureSession.client`,
 `sync`, `room(id)`, `Room.receiptId(...)`, and `Room.orderedThread(...)` in androidTest scope. Parent can wire
-its production receipt/directory adapter to these objects after that API lands. The existing list adapter is
-already exercised; the unfinished unread adapter is deliberately not imported.
+additional production adapters to these objects. Both the existing thread-list adapter and the new
+RustThreadDirectorySource are directly exercised, along with the production confirmed-send observer.
 
-Still unproved: hosted compilation/instrumentation, production unread reducer end-to-end, whole-app normal
-entry/navigation and selection, full OS-process restart, encryption/decryption, unsupported-event/unknown
-coverage, live multi-owner subscription coordination, application sends and receipts, account switching,
-UI accessibility, app upgrades and production/release packaging. Native SQLite/client reopen is **not**
-force-stop/relaunch proof. The fixture's initialized Threads flag is capability setup, not a normal-entry rollout gate.
+Separate gates: the Threads production validation workflow runs canonical Matrix/Home/Messages/
+TextComposer/Appnav regressions and genuine Compose captures. It is not this native library workflow.
+Neither workflow by itself proves a packaged whole-app force-stop/relaunch, encrypted real-account
+history, physical-device accessibility, install/update, or production release qualification. Native
+SQLite/client reopen is **not** force-stop/relaunch proof. Threads is enabled by default in production;
+the fixture also explicitly initializes the native capability for its isolated library Client.

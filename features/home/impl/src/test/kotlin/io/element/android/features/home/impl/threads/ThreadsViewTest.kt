@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.v2.runAndroidComposeUiTest
 import androidx.compose.ui.unit.Density
@@ -120,6 +121,47 @@ class ThreadsViewTest : RobolectricTest() {
         }
         onNodeWithText("Last messaged").assertIsDisplayed()
         onNodeWithText("Last opened").assertIsDisplayed()
+    }
+
+    @Test fun `home exposes Threads and preserves Recent when visiting Chats`() = runAndroidComposeUiTest<ComponentActivity> {
+        val directory = FakeThreadDirectory().apply { state.value = ThreadDirectorySnapshot(listOf(row), ThreadCoverage.Complete) }
+        val client = FakeMatrixClient(sessionId = key.accountId, threadDirectory = directory)
+        val navigation = mutableStateOf(io.element.android.features.home.impl.HomeNavigationBarItem.Chats)
+        setContent {
+            ElementTheme {
+                io.element.android.features.home.impl.HomeView(
+                    homeState = io.element.android.features.home.impl.aHomeState(
+                        currentHomeNavigationBarItem = navigation.value,
+                        eventSink = { event ->
+                            if (event is io.element.android.features.home.impl.HomeEvent.SelectHomeNavigationBarItem) navigation.value = event.item
+                        },
+                    ),
+                    onRoomClick = { _, _ -> },
+                    onSettingsClick = {},
+                    onSetUpRecoveryClick = {},
+                    onConfirmRecoveryKeyClick = {},
+                    onStartChatClick = {},
+                    onCreateSpaceClick = {},
+                    onRoomSettingsClick = {},
+                    onMenuActionClick = {},
+                    onReportRoomClick = {},
+                    onDeclineInviteAndBlockUser = {},
+                    acceptDeclineInviteView = {},
+                    leaveRoomView = {},
+                    threadsContent = { modifier, padding -> ThreadsRoute(client, {}, {}, modifier, padding) },
+                )
+            }
+        }
+        onNodeWithText("Threads").performClick()
+        onNodeWithText("Root preview").assertIsDisplayed()
+        val output = File("build/outputs/threads-screenshots").apply { mkdirs() }
+        onRoot().captureRoboImage(File(output, "home-threads-unread.png").path)
+        onNodeWithText("Recent").performClick()
+        onNodeWithText("On this device").assertIsDisplayed()
+        onRoot().captureRoboImage(File(output, "home-threads-recent.png").path)
+        onNodeWithText("Chats").performClick()
+        onNodeWithText("Threads").performClick()
+        onNodeWithText("Recent").assertIsSelected()
     }
 
     @Test fun `capture production directory main states in light dark and large text`() {

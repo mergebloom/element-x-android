@@ -88,6 +88,27 @@ class ConfirmedThreadSendsTest {
         fun sent(id: String, room: String = roomId) = listener.onUpdate(room, RoomSendQueueUpdate.SentEvent("txn$id", id))
     }
 
+    @Test fun `logout barrier prevents suspended lookup and late callback from recreating files`() = runTest {
+        val observer = Observer(this)
+        observer.lookup = { awaitCancellation() }
+        runCurrent()
+        observer.sent("$" + "before-logout")
+        runCurrent()
+        // Production destroy waits for the observer, then seals both writers before removing session files.
+        observer.job.cancel()
+        observer.job.join()
+        observer.recent.close()
+        assertThat(observer.pendingFile.delete()).isTrue()
+        observer.recentFile.delete()
+        observer.sent("$" + "late-native-callback")
+        assertThat(runCatching { observer.recent.recordOpened(key("$" + "late-view")) }.isFailure).isTrue()
+        assertThat(runCatching { observer.recent.clear() }.isFailure).isTrue()
+        runCurrent()
+        assertThat(observer.pendingFile.exists()).isFalse()
+        assertThat(observer.recentFile.exists()).isFalse()
+        assertThat(observer.recent.entries.value).isEmpty()
+    }
+
     @Test fun `production observer records text voice and file only after server confirmation`() = runTest {
         val observer = Observer(this)
         runCurrent()

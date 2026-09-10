@@ -25,6 +25,7 @@ class PendingThreadSends(private val file: File, private val account: String? = 
     }
     private val lock = Any()
     private var loaded = false
+    private var closed = false
     private var sequence = 0L
     private var epoch = 0L
     private var items = emptyList<Item>()
@@ -34,7 +35,10 @@ class PendingThreadSends(private val file: File, private val account: String? = 
         epoch
     }
 
+    fun close() = synchronized(lock) { closed = true }
+
     private fun load(floor: Long = 0) {
+        check(!closed) { "Recent session is closed" }
         if (loaded) return
         if (file.exists()) {
             val isVersioned = file.bufferedReader().use { it.readLine()?.startsWith("#") == true }

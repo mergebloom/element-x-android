@@ -101,6 +101,7 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -669,6 +670,12 @@ class RustMatrixClient(
     }
 
     internal suspend fun destroy() {
+        // Cancellation alone cannot stop synchronous disk writes or a callback already in flight.
+        // Seal both stores and await the observer before destroying SDK handles or session files.
+        withContext(kotlinx.coroutines.NonCancellable) {
+            confirmedThreadSends.cancelAndJoin()
+            recentThreads.close()
+        }
         innerNotificationClient.close()
 
         roomFactory.destroy()

@@ -33,6 +33,7 @@ class FileRecentThreads(
     private var highWaterTime = 0L
     private var generation = 0L
     private var loaded = false
+    private var closed = false
     private val mutableEntries = MutableStateFlow<List<RecentThread>>(emptyList())
     override val entries = mutableEntries.asStateFlow()
 
@@ -56,7 +57,17 @@ class FileRecentThreads(
 
     suspend fun load() = withContext(dispatcher) { mutex.withLock { ensureLoaded() } }
 
+    /** Await existing writes and reject late UI/native callbacks before session files can be removed. */
+    suspend fun close() = withContext(dispatcher) {
+        mutex.withLock {
+            closed = true
+            pending?.close()
+            mutableEntries.value = emptyList()
+        }
+    }
+
     private fun ensureLoaded() {
+        check(!closed) { "Recent session is closed" }
         if (!loaded) {
             val rows = read()
             pending?.advanceSequence(sequence)
