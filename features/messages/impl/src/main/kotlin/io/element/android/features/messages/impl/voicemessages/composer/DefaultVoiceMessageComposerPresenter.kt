@@ -322,7 +322,9 @@ class DefaultVoiceMessageComposerPresenter(
         if (isSending) return
         if (!starting && !recordingActive && voiceRecorder.state.value !is VoiceRecorderState.Recording &&
             !(cancelled && voiceRecorder.state.value is VoiceRecorderState.Finished)
-        ) return
+        ) {
+            return
+        }
         // Explicit cancel wins over subsequent lifecycle/focus stops, including during native startup.
         stopRequested = stopRequested == true || cancelled
         if (stopping) return
