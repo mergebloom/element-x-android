@@ -1,10 +1,11 @@
 import json
+import socket
 from pathlib import Path
 import tempfile
 import unittest
 
 from evidence import CLASS, EXPECTED, elf_identity, parse_instrumentation, write_results
-from fixture_server import configuration, is_receipt_write
+from fixture_server import assert_ports_available, configuration, is_receipt_write
 
 
 def runner_output():
@@ -17,6 +18,27 @@ def runner_output():
 
 
 class EvidenceTests(unittest.TestCase):
+    def test_port_guard_rejects_existing_listener_even_with_reuse(self):
+        with socket.socket() as listener:
+            listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            listener.bind(("127.0.0.1", 0))
+            listener.listen(1)
+            with self.assertRaises(OSError):
+                assert_ports_available([listener.getsockname()[1]])
+
+    def test_port_guard_allows_closed_previous_fixture_in_time_wait(self):
+        with socket.socket() as listener, socket.socket() as client:
+            listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            listener.bind(("127.0.0.1", 0))
+            port = listener.getsockname()[1]
+            listener.listen(1)
+            client.connect(("127.0.0.1", port))
+            accepted, _ = listener.accept()
+            accepted.close()
+            self.assertEqual(client.recv(1), b"")
+        # Both processes are gone; only the closed connection remains.
+        assert_ports_available([port])
+
     def test_accepts_exact_nonzero_plan(self):
         result = parse_instrumentation(runner_output())
         self.assertTrue(result["passed"])

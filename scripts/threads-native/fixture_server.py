@@ -186,6 +186,15 @@ def configuration(directory):
             "rc_message": {"per_second": 100, "burst_count": 100}, "suppress_key_server_warning": True}
 
 
+def assert_ports_available(ports):
+    # Permit only closed connections in TIME_WAIT, never an existing listener.
+    # A native fixture and full-app fixture deliberately run sequentially.
+    for port in ports:
+        with socket.socket() as guard:
+            guard.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            guard.bind(("127.0.0.1", port))
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--evidence", type=Path, required=True)
@@ -195,9 +204,7 @@ def main():
         raise SystemExit("Wrong Synapse version")
     os.umask(0o077)
     # Never attach to a pre-existing server. Both ports must initially be free.
-    for port in (UPSTREAM_PORT, PROXY_PORT):
-        with socket.socket() as guard:
-            guard.bind(("127.0.0.1", port))
+    assert_ports_available((UPSTREAM_PORT, PROXY_PORT))
     directory = Path(tempfile.mkdtemp(prefix="threads-native-synapse-"))
     args.evidence.mkdir(parents=True, exist_ok=True)
     fixture = Fixture()

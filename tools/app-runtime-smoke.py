@@ -144,6 +144,17 @@ def main():
     server = subprocess.Popen([str(Path(os.environ['RUNNER_TEMP']) / 'threads-synapse-venv/bin/python'), 'scripts/threads-native/fixture_server.py', '--evidence', str(OUT / 'server')], stdout=server_log, stderr=server_log)
     try:
         for _ in range(180):
+            if server.poll() is not None:
+                # Allowlist diagnostics only; raw server logs can contain tokens.
+                server_log.seek(0)
+                raw = server_log.read().decode(errors='replace')
+                RESULT['fixture_startup'] = {
+                    'returncode': server.returncode,
+                    'port_busy': 'Address already in use' in raw,
+                    'wrong_version': 'Wrong Synapse version' in raw,
+                    'dependency_missing': 'ModuleNotFoundError' in raw,
+                }
+                raise RuntimeError('Disposable fixture process exited; sanitized diagnostics retained')
             try:
                 control('audit', {})
                 break
