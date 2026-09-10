@@ -8,6 +8,7 @@
 
 package io.element.android.features.messages.impl
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -91,13 +92,20 @@ import io.element.android.features.messages.impl.timeline.components.receipt.bot
 import io.element.android.features.messages.impl.timeline.components.receipt.bottomsheet.ReadReceiptBottomSheetEvent
 import io.element.android.features.messages.impl.timeline.model.TimelineItem
 import io.element.android.features.messages.impl.timeline.model.TimelineItemGroupPosition
+import io.element.android.features.messages.impl.timeline.model.event.TimelineItemAudioContent
+import io.element.android.features.messages.impl.timeline.model.event.TimelineItemFileContent
+import io.element.android.features.messages.impl.timeline.model.event.TimelineItemImageContent
+import io.element.android.features.messages.impl.timeline.model.event.TimelineItemLocationContent
+import io.element.android.features.messages.impl.timeline.model.event.TimelineItemVideoContent
 import io.element.android.features.messages.impl.timeline.model.event.aTimelineItemStateEventContent
 import io.element.android.features.messages.impl.timeline.model.event.aTimelineItemTextContent
 import io.element.android.features.messages.impl.timeline.sendfailure.SendFailureDialogView
 import io.element.android.features.messages.impl.topbars.MessagesViewTopBar
 import io.element.android.features.messages.impl.topbars.ThreadTopBar
+import io.element.android.features.messages.impl.voicemessages.composer.VoiceDraftNavigationGuard
 import io.element.android.features.messages.impl.voicemessages.composer.VoiceMessagePermissionRationaleDialog
 import io.element.android.features.messages.impl.voicemessages.composer.VoiceMessageSendingFailedDialog
+import io.element.android.features.messages.impl.voicemessages.composer.rememberVoiceDraftNavigationGuard
 import io.element.android.features.roomcall.api.RoomCallState
 import io.element.android.libraries.androidutils.ui.hideKeyboard
 import io.element.android.libraries.designsystem.atomic.molecules.ComposerAlertMolecule
@@ -130,6 +138,7 @@ import io.element.android.libraries.matrix.api.user.MatrixUser
 import io.element.android.libraries.matrix.ui.media.contentvalidation.ContentValidationValue
 import io.element.android.libraries.matrix.ui.media.contentvalidation.LocalEventContentValidationState
 import io.element.android.libraries.textcomposer.model.TextEditorState
+import io.element.android.libraries.textcomposer.model.VoiceMessageState
 import io.element.android.libraries.ui.strings.CommonStrings
 import io.element.android.wysiwyg.link.Link
 import kotlinx.collections.immutable.persistentListOf
@@ -154,7 +163,12 @@ fun MessagesView(
     modifier: Modifier = Modifier,
     forceJumpToBottomVisibility: Boolean = false,
     customReactionBottomSheet: @Composable () -> Unit,
+    voiceDraftNavigationGuard: VoiceDraftNavigationGuard = remember { VoiceDraftNavigationGuard() },
 ) {
+    val guardVoiceDraft = rememberVoiceDraftNavigationGuard(state.voiceMessageComposerState, voiceDraftNavigationGuard)
+    BackHandler(enabled = state.voiceMessageComposerState.voiceMessageState !is VoiceMessageState.Idle) {
+        guardVoiceDraft(onBackClick)
+    }
     val eventContentValidationState = LocalEventContentValidationState.current
 
     OnLifecycleEvent { _, event ->
@@ -182,9 +196,17 @@ fun MessagesView(
         val eventId = event.eventId
         if (eventId != null && eventContentValidationState[eventId].getCurrentOverallState() != ContentValidationValue.Valid) return
 
-        val hideKeyboard = onEventContentClick(state.timelineState.isLive, event)
-        if (hideKeyboard) {
-            localView.hideKeyboard()
+        val openContent = {
+            if (onEventContentClick(state.timelineState.isLive, event)) localView.hideKeyboard()
+        }
+        when (event.content) {
+            is TimelineItemImageContent,
+            is TimelineItemVideoContent,
+            is TimelineItemAudioContent,
+            is TimelineItemFileContent,
+            is TimelineItemLocationContent -> guardVoiceDraft(openContent)
+            // Text/poll/state-event clicks do not leave the composer.
+            else -> openContent()
         }
     }
 
@@ -239,7 +261,7 @@ fun MessagesView(
                             roomAvatarData = state.roomAvatar,
                             heroes = state.heroes,
                             isTombstoned = state.isTombstoned,
-                            onBackClick = onBackClick,
+                            onBackClick = { guardVoiceDraft(onBackClick) },
                         )
                     } else {
                         MessagesViewTopBar(
@@ -250,14 +272,14 @@ fun MessagesView(
                             dmUserIdentityState = state.dmUserVerificationState,
                             sharedHistoryIcon = state.topBarSharedHistoryIcon,
                             dmUserStatus = state.dmUserStatus,
-                            onBackClick = { hidingKeyboard { onBackClick() } },
-                            onRoomDetailsClick = { hidingKeyboard { onRoomDetailsClick() } },
+                            onBackClick = { guardVoiceDraft { hidingKeyboard { onBackClick() } } },
+                            onRoomDetailsClick = { guardVoiceDraft { hidingKeyboard { onRoomDetailsClick() } } },
                             menuActions = {
                                 MessagesMenuActions(
                                     displayThreads = state.timelineState.timelineMode !is Timeline.Mode.Thread && state.threads.hasThreads,
                                     roomCallState = state.roomCallState,
-                                    onJoinCallClick = onJoinCallClick,
-                                    onThreadsListClick = onThreadsListClick
+                                    onJoinCallClick = { audio -> guardVoiceDraft { onJoinCallClick(audio) } },
+                                    onThreadsListClick = { guardVoiceDraft(onThreadsListClick) }
                                 )
                             }
                         )
@@ -273,13 +295,8 @@ fun MessagesView(
                             state = state,
                             onContentClick = ::onContentClick,
                             onGalleryItemClick = { event, index ->
-                                val hideKeyboard = onGalleryEventItemClick(
-                                    state.timelineState.isLive,
-                                    event,
-                                    index,
-                                )
-                                if (hideKeyboard) {
-                                    localView.hideKeyboard()
+                                guardVoiceDraft {
+                                    if (onGalleryEventItemClick(state.timelineState.isLive, event, index)) localView.hideKeyboard()
                                 }
                             },
                             onMessageLongClick = ::onMessageLongClick,
@@ -290,7 +307,7 @@ fun MessagesView(
                             },
                             onLinkClick = { link, customTab ->
                                 if (customTab) {
-                                    onLinkClick(link.url, true)
+                                    guardVoiceDraft { onLinkClick(link.url, true) }
                                     // Do not check those links, they are internal link only
                                 } else {
                                     state.linkState.eventSink(LinkEvent.OnLinkClick(link))
@@ -307,9 +324,9 @@ fun MessagesView(
                             onSwipeToReply = { targetEvent ->
                                 state.eventSink(MessagesEvent.HandleAction(TimelineItemAction.Reply, targetEvent))
                             },
-                            onJoinCallClick = onJoinCallClick,
+                            onJoinCallClick = { audio -> guardVoiceDraft { onJoinCallClick(audio) } },
                             forceJumpToBottomVisibility = forceJumpToBottomVisibility,
-                            onViewAllPinnedMessagesClick = onViewAllPinnedMessagesClick,
+                            onViewAllPinnedMessagesClick = { guardVoiceDraft(onViewAllPinnedMessagesClick) },
                             knockRequestsBannerView = knockRequestsBannerView,
                         )
 
@@ -340,9 +357,9 @@ fun MessagesView(
         bottomSheetContent = {
             MessagesViewComposerBottomSheetContents(
                 state = state,
-                onLinkClick = { url, customTab -> onLinkClick(url, customTab) },
+                onLinkClick = { url, customTab -> guardVoiceDraft { onLinkClick(url, customTab) } },
                 onRoomSuccessorClick = { roomId ->
-                    state.timelineState.eventSink(TimelineEvent.NavigateToPredecessorOrSuccessorRoom(roomId = roomId))
+                    guardVoiceDraft { state.timelineState.eventSink(TimelineEvent.NavigateToPredecessorOrSuccessorRoom(roomId = roomId)) }
                 },
             )
         },

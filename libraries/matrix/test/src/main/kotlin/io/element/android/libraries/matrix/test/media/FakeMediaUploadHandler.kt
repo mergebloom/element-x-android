@@ -14,8 +14,9 @@ import kotlin.coroutines.cancellation.CancellationException
 
 class FakeMediaUploadHandler(
     private var result: Result<Unit> = Result.success(Unit),
+    private val awaitResult: (suspend () -> Result<Unit>)? = null,
 ) : MediaUploadHandler {
-    override suspend fun await(): Result<Unit> = simulateLongTask { result }
+    override suspend fun await(): Result<Unit> = simulateLongTask { awaitResult?.invoke() ?: result }
 
     override fun cancel() {
         result = Result.failure(CancellationException())

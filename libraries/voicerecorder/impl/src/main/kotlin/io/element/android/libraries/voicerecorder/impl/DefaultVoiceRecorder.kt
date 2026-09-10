@@ -11,7 +11,6 @@ package io.element.android.libraries.voicerecorder.impl
 import android.Manifest
 import androidx.annotation.RequiresPermission
 import dev.zacsweers.metro.ContributesBinding
-import dev.zacsweers.metro.SingleIn
 import io.element.android.appconfig.VoiceMessageConfig
 import io.element.android.libraries.core.coroutine.CoroutineDispatchers
 import io.element.android.libraries.core.coroutine.childScope
@@ -27,13 +26,19 @@ import io.element.android.libraries.voicerecorder.impl.audio.Encoder
 import io.element.android.libraries.voicerecorder.impl.audio.resample
 import io.element.android.libraries.voicerecorder.impl.file.VoiceFileConfig
 import io.element.android.libraries.voicerecorder.impl.file.VoiceFileManager
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 import timber.log.Timber
 import java.io.File
@@ -41,7 +46,6 @@ import java.util.UUID
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeSource
 
-@SingleIn(RoomScope::class)
 @ContributesBinding(RoomScope::class)
 class DefaultVoiceRecorder(
     private val dispatchers: CoroutineDispatchers,
@@ -71,100 +75,120 @@ class DefaultVoiceRecorder(
     override val state: StateFlow<VoiceRecorderState> = _state
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    override suspend fun startRecord() = lock.withLock {
+    override suspend fun startRecord(): Unit = lock.withLock {
         if (recordingJob != null) {
             Timber.w("Voice recorder is already recording, ignoring this start")
             return@withLock
         }
 
         Timber.i("Voice recorder started recording")
-        outputFile = fileManager.createFile()
-            .also(encoder::init)
-
-        levels.clear()
-
-        val audioRecorder = audioReaderFactory.create(config, dispatchers).also { audioReader = it }
-
-        recordingJob = voiceCoroutineScope.launch {
-            val startedAt = timeSource.markNow()
-            audioRecorder.record { audio ->
-                yield()
-
-                val elapsedTime = startedAt.elapsedNow()
-
-                if (elapsedTime > VoiceMessageConfig.maxVoiceMessageDuration) {
-                    Timber.w("Voice message time limit reached")
-                    stopRecord(false)
-                    return@record
-                }
-
-                when (audio) {
-                    is Audio.Data -> {
-                        val audioLevel = audioLevelCalculator.calculateAudioLevel(audio.buffer)
-
-                        lock.withLock {
-                            levels.add(audioLevel)
-                            _state.emit(VoiceRecorderState.Recording(elapsedTime, levels.toList()))
+        try {
+            val file = fileManager.createFile()
+            outputFile = file
+            encoder.init(file)
+            levels.clear()
+            val audioRecorder = audioReaderFactory.create(config, dispatchers).also { audioReader = it }
+            // Establish ownership before returning, not on the first microphone buffer.
+            _state.value = VoiceRecorderState.Recording(0.milliseconds, emptyList())
+            recordingJob = voiceCoroutineScope.launch(start = CoroutineStart.LAZY) {
+                val owner = currentCoroutineContext()[Job]
+                try {
+                    currentCoroutineContext().ensureActive()
+                    val startedAt = timeSource.markNow()
+                    audioRecorder.record { audio ->
+                        yield()
+                        val elapsedTime = startedAt.elapsedNow()
+                        if (elapsedTime > VoiceMessageConfig.maxVoiceMessageDuration) {
+                            stopRecord(false)
+                            return@record
                         }
-                        encoder.encode(audio.buffer, audio.readSize)
+                        lock.withLock audioBuffer@{
+                            if (recordingJob !== owner) return@audioBuffer
+                            when (audio) {
+                                is Audio.Data -> {
+                                    encoder.encode(audio.buffer, audio.readSize)
+                                    levels.add(audioLevelCalculator.calculateAudioLevel(audio.buffer))
+                                    _state.value = VoiceRecorderState.Recording(elapsedTime, levels.toList())
+                                }
+                                is Audio.Error -> {
+                                    Timber.e("Voice message error: code=${audio.audioRecordErrorCode}")
+                                    _state.value = VoiceRecorderState.Recording(elapsedTime, emptyList())
+                                }
+                            }
+                        }
                     }
-                    is Audio.Error -> {
-                        Timber.e("Voice message error: code=${audio.audioRecordErrorCode}")
-                        _state.emit(VoiceRecorderState.Recording(elapsedTime, listOf()))
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // AudioRecord.startRecording runs here, after startRecord has returned.
+                    // Do not crash the session or leave a phantom active recording on worker failure.
+                    withContext(NonCancellable) {
+                        lock.withLock {
+                            if (recordingJob === owner) {
+                                Timber.e(e, "Voice recorder worker failed")
+                                releaseRecorder()
+                                if (levels.isEmpty()) {
+                                    deleteFile()
+                                    _state.value = VoiceRecorderState.Failure(e)
+                                } else {
+                                    publishFinished()
+                                }
+                            }
+                        }
                     }
                 }
             }
+            recordingJob?.start()
+        } catch (e: Exception) {
+            releaseRecorder()
+            deleteFile()
+            _state.value = VoiceRecorderState.Failure(e)
+            throw e
         }
     }
 
-    /**
-     * Stop the current recording.
-     *
-     * Call [deleteRecording] to delete any recorded audio.
-     */
-    override suspend fun stopRecord(
-        cancelled: Boolean
-    ) {
-        recordingJob?.cancel()?.also {
-            Timber.i("Voice recorder stopped recording")
+    override suspend fun stopRecord(cancelled: Boolean) = lock.withLock {
+        releaseRecorder()
+        if (cancelled) {
+            deleteFile()
+            _state.value = VoiceRecorderState.Idle
+        } else if (_state.value is VoiceRecorderState.Recording) {
+            publishFinished()
         }
+    }
+
+    /** All resource and encoder access is serialized, including late buffers and explicit deletion. */
+    override suspend fun deleteRecording() = lock.withLock {
+        releaseRecorder()
+        deleteFile()
+        _state.value = VoiceRecorderState.Idle
+    }
+
+    private fun releaseRecorder() {
+        recordingJob?.cancel()
         recordingJob = null
-
-        audioReader?.stop()
+        runCatching { audioReader?.stop() }.onFailure { Timber.e(it, "Unable to stop audio reader") }
         audioReader = null
-        encoder.release()
+        runCatching { encoder.release() }.onFailure { Timber.e(it, "Unable to release voice encoder") }
+    }
 
-        lock.withLock {
-            if (cancelled) {
-                deleteRecording()
-                levels.clear()
-            }
+    private fun deleteFile() {
+        outputFile?.let(fileManager::deleteFile)
+        outputFile = null
+        levels.clear()
+    }
 
-            _state.emit(
-                when (val file = outputFile) {
-                    null -> VoiceRecorderState.Idle
-                    else -> {
-                        val duration = (state.value as? VoiceRecorderState.Recording)?.elapsedTime
-                        VoiceRecorderState.Finished(
-                            file = file,
-                            mimeType = fileConfig.mimeType,
-                            waveform = levels.resample(100),
-                            duration = duration ?: 0.milliseconds
-                        )
-                    }
-                }
+    private fun publishFinished() {
+        val file = outputFile
+        _state.value = if (file == null) {
+            VoiceRecorderState.Idle
+        } else {
+            VoiceRecorderState.Finished(
+                file = file,
+                mimeType = fileConfig.mimeType,
+                waveform = levels.resample(100),
+                duration = (state.value as? VoiceRecorderState.Recording)?.elapsedTime ?: 0.milliseconds,
             )
         }
-    }
-
-    /**
-     * Stop the current recording and delete the output file.
-     */
-    override suspend fun deleteRecording() {
-        outputFile?.let(fileManager::deleteFile)?.also {
-            Timber.i("Voice recorder deleted recording")
-        }
-        outputFile = null
-        _state.emit(VoiceRecorderState.Idle)
     }
 }

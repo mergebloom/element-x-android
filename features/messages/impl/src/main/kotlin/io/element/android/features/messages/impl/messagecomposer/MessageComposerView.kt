@@ -73,6 +73,10 @@ internal fun MessageComposerView(
     }
 
     fun onTyping(typing: Boolean) {
+        // Both editor implementations call this from their unthrottled TextWatcher,
+        // including deletion/undo/format changes. Never couple draft ownership to
+        // whether the room sends or debounces a network typing notice.
+        state.eventSink(MessageComposerEvent.InputChanged)
         state.eventSink(MessageComposerEvent.TypingNotice(typing))
     }
 
@@ -89,7 +93,6 @@ internal fun MessageComposerView(
 
     val onSendVoiceMessage = {
         voiceMessageState.eventSink(VoiceMessageComposerEvent.SendVoiceMessage)
-        state.eventSink(MessageComposerEvent.CloseSpecialMode)
     }
 
     val onDeleteVoiceMessage = {
@@ -100,6 +103,17 @@ internal fun MessageComposerView(
         voiceMessageState.eventSink(VoiceMessageComposerEvent.PlayerEvent(event))
     }
 
+    if (voiceMessageState.microphoneReady || voiceMessageState.recordingError) {
+        io.element.android.libraries.designsystem.theme.components.Text(
+            text = androidx.compose.ui.res.stringResource(
+                if (voiceMessageState.recordingError) {
+                    io.element.android.features.messages.impl.R.string.screen_voice_error
+                } else {
+                    io.element.android.features.messages.impl.R.string.screen_voice_ready
+                }
+            ),
+        )
+    }
     TextComposer(
         modifier = modifier,
         state = state.textEditorState,

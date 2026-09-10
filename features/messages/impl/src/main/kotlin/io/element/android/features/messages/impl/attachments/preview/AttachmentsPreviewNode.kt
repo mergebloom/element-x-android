@@ -23,6 +23,7 @@ import io.element.android.compound.colors.SemanticColorsLightDark
 import io.element.android.compound.theme.ForcedDarkElementTheme
 import io.element.android.features.enterprise.api.EnterpriseService
 import io.element.android.features.messages.impl.attachments.Attachment
+import io.element.android.features.messages.impl.messagecomposer.AttachmentCaptionDraft
 import io.element.android.libraries.architecture.NodeInputs
 import io.element.android.libraries.architecture.inputs
 import io.element.android.libraries.di.RoomScope
@@ -46,6 +47,7 @@ class AttachmentsPreviewNode(
         val attachments: ImmutableList<Attachment>,
         val timelineMode: Timeline.Mode,
         val inReplyToEventId: EventId?,
+        val captionDraft: AttachmentCaptionDraft? = null,
     ) : NodeInputs
 
     private val inputs: Inputs = inputs()
@@ -59,6 +61,7 @@ class AttachmentsPreviewNode(
         timelineMode = inputs.timelineMode,
         onDoneListener = onDoneListener,
         inReplyToEventId = inputs.inReplyToEventId,
+        captionDraft = inputs.captionDraft,
     )
 
     @Composable

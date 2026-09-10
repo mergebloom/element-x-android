@@ -19,8 +19,11 @@ sealed interface VoiceRecorderState {
      */
     data object Idle : VoiceRecorderState
 
+    /** Native startup failed before usable audio was captured. A fresh activation may retry. */
+    data class Failure(val cause: Throwable) : VoiceRecorderState
+
     /**
-     * The recorder is currently recording.
+     * The recorder owns an active recording, including startup before the first audio buffer.
      *
      * @property elapsedTime The elapsed time since the recording started.
      * @property levels The current audio levels of the recording as a fraction of 1. All values are between 0 and 1.

@@ -20,7 +20,12 @@ class StableCharSequence(initialText: CharSequence = "") {
     private var value by mutableStateOf<SpannableString>(SpannableString.valueOf(initialText))
     private var needsDisplaying by mutableStateOf(false)
 
+    // Counts edits, including a replacement with equal text, rather than comparing draft strings.
+    var revision: Long = 0
+        private set
+
     fun update(newText: CharSequence?, needsDisplaying: Boolean) {
+        revision++
         value = SpannableString.valueOf(newText.orEmpty())
         this.needsDisplaying = needsDisplaying
     }

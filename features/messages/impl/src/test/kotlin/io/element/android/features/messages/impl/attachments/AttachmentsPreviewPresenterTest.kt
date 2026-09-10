@@ -26,6 +26,8 @@ import io.element.android.features.messages.impl.attachments.video.MediaOptimiza
 import io.element.android.features.messages.impl.attachments.video.VideoCompressionPresetSelector
 import io.element.android.features.messages.impl.attachments.video.VideoUploadEstimation
 import io.element.android.features.messages.impl.fixtures.aMediaAttachment
+import io.element.android.features.messages.impl.messagecomposer.AttachmentCaptionDraft
+import io.element.android.features.messages.impl.messagecomposer.AttachmentCaptionDrafts
 import io.element.android.features.messages.test.attachments.video.FakeMediaOptimizationSelectorPresenterFactory
 import io.element.android.libraries.androidutils.file.TemporaryUriDeleter
 import io.element.android.libraries.architecture.AsyncData
@@ -431,7 +433,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             sendFileResult.assertions().isCalledOnce()
             failureState.eventSink(AttachmentsPreviewEvent.CancelAndClearSendState)
             val clearedState = awaitLastSequentialItem()
-            assertThat(clearedState.sendActionState).isEqualTo(SendActionState.Sending.ReadyToUpload(listOf(mediaUploadInfo)))
+            assertThat(clearedState.sendActionState).isEqualTo(SendActionState.Idle)
         }
     }
 
@@ -457,8 +459,8 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.ReadyToUpload(listOf(mediaUploadInfo)))
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Uploading(listOf(mediaUploadInfo)))
             initialState.eventSink(AttachmentsPreviewEvent.CancelAndClearSendState)
-            assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.ReadyToUpload(listOf(mediaUploadInfo)))
-            // The sending is cancelled and the state is kept at ReadyToUpload
+            assertThat(awaitLastSequentialItem().sendActionState).isEqualTo(SendActionState.Idle)
+            // Retry must prepare fresh files; the native handler may delete its old files.
             ensureAllEventsConsumed()
         }
     }
@@ -933,7 +935,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
         }
     }
 
-    private fun TestScope.createAttachmentsPreviewPresenter(
+    internal fun TestScope.createAttachmentsPreviewPresenter(
         attachments: List<Attachment> = listOf(
             aMediaAttachment(
                 aLocalMedia(
@@ -945,7 +947,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
         timelineMode: Timeline.Mode = Timeline.Mode.Live,
         permalinkBuilder: PermalinkBuilder = FakePermalinkBuilder(),
         mediaPreProcessor: MediaPreProcessor = FakeMediaPreProcessor(),
-        temporaryUriDeleter: TemporaryUriDeleter = FakeTemporaryUriDeleter(),
+        temporaryUriDeleter: TemporaryUriDeleter = FakeTemporaryUriDeleter {},
         onDoneListener: OnDoneListener = OnDoneListener { lambdaError() },
         displayMediaQualitySelectorViews: Boolean = false,
         mediaOptimizationSelectorPresenterFactory: FakeMediaOptimizationSelectorPresenterFactory = FakeMediaOptimizationSelectorPresenterFactory(
@@ -977,6 +979,9 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             }
         },
         videoCompressionPresetSelector: VideoCompressionPresetSelector = VideoCompressionPresetSelector(),
+        captionDraft: AttachmentCaptionDraft? = null,
+        captionDrafts: AttachmentCaptionDrafts = AttachmentCaptionDrafts(),
+        inReplyToEventId: EventId? = null,
     ): AttachmentsPreviewPresenter {
         return AttachmentsPreviewPresenter(
             attachments = attachments.toImmutableList(),
@@ -999,7 +1004,9 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             mediaOptimizationSelectorPresenterFactory = mediaOptimizationSelectorPresenterFactory,
             videoCompressionPresetSelector = videoCompressionPresetSelector,
             timelineMode = timelineMode,
-            inReplyToEventId = null,
+            inReplyToEventId = inReplyToEventId,
+            captionDraft = captionDraft,
+            captionDrafts = captionDrafts,
             mediaOptimizationConfigProvider = mediaOptimizationConfigProvider,
         )
     }

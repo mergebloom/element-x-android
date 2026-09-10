@@ -15,4 +15,16 @@
     <string name="screen_reasoning_medium">Medium</string>
     <string name="screen_reasoning_high">High</string>
     <string name="screen_reasoning_max">Max</string>
+    <string name="screen_voice_idle_hint">Tap mic to record hands-free. Hold and release to review.</string>
+    <string name="screen_voice_held_ltr">Release to review · ← Slide to cancel · ↑ Slide up to lock</string>
+    <string name="screen_voice_held_rtl">Release to review · Slide to cancel → · ↑ Slide up to lock</string>
+    <string name="screen_voice_release_hint">Release to review. Slide until a ring fills.</string>
+    <string name="screen_voice_cancel_left">Slide left to cancel</string>
+    <string name="screen_voice_cancel_right">Slide right to cancel</string>
+    <string name="screen_voice_slide_lock">Slide up to lock</string>
+    <string name="screen_voice_locked">Recording locked. Stop to review before sending.</string>
+    <string name="screen_voice_hands_free">Recording hands-free. Stop to review before sending.</string>
+    <string name="screen_voice_stop_to_review">Stop to review</string>
+    <string name="screen_voice_preview_hint">Review your voice message, then send. Your typed draft is kept.</string>
+    <string name="screen_voice_edit_disabled">Voice recording is unavailable while editing a message.</string>
 </resources>

@@ -34,6 +34,9 @@ sealed interface MessageComposerEvent {
 
     data class ToggleTextFormatting(val enabled: Boolean) : MessageComposerEvent
     data class Error(val error: Throwable) : MessageComposerEvent
+
+    /** Every editor write, independently of network typing notice throttling/preferences. */
+    data object InputChanged : MessageComposerEvent
     data class TypingNotice(val isTyping: Boolean) : MessageComposerEvent
     data class SuggestionReceived(val suggestion: Suggestion?) : MessageComposerEvent
     data class InsertSuggestion(val resolvedSuggestion: ResolvedSuggestion) : MessageComposerEvent

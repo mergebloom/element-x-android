@@ -28,6 +28,8 @@ data class AttachmentsPreviewState(
     val displayFileTooLargeError: Boolean,
     val currentIndex: Int,
     val eventSink: (AttachmentsPreviewEvent) -> Unit,
+    val showDraftConflict: Boolean = false,
+    val plainTextConversion: Boolean = false,
 ) {
     val isGallery: Boolean get() = attachments.size > 1
     val totalCount: Int get() = attachments.size

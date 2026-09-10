@@ -33,6 +33,7 @@ import io.element.android.features.knockrequests.api.banner.KnockRequestsBannerR
 import io.element.android.features.messages.impl.actionlist.ActionListPresenter
 import io.element.android.features.messages.impl.actionlist.model.TimelineItemActionPostProcessor
 import io.element.android.features.messages.impl.attachments.Attachment
+import io.element.android.features.messages.impl.messagecomposer.AttachmentCaptionDraft
 import io.element.android.features.messages.impl.messagecomposer.MessageComposerEvent
 import io.element.android.features.messages.impl.messagecomposer.MessageComposerPresenter
 import io.element.android.features.messages.impl.timeline.TimelineController
@@ -42,6 +43,7 @@ import io.element.android.features.messages.impl.timeline.components.customreact
 import io.element.android.features.messages.impl.timeline.di.LocalTimelineItemPresenterFactories
 import io.element.android.features.messages.impl.timeline.di.TimelineItemPresenterFactories
 import io.element.android.features.messages.impl.timeline.model.TimelineItem
+import io.element.android.features.messages.impl.voicemessages.composer.VoiceDraftNavigationGuard
 import io.element.android.features.roommembermoderation.api.ModerationAction
 import io.element.android.features.roommembermoderation.api.RoomMemberModerationEvent
 import io.element.android.features.roommembermoderation.api.RoomMemberModerationRenderer
@@ -110,6 +112,7 @@ class MessagesNode(
 
     private val inputs = inputs<Inputs>()
     private val callback: Callback = callback()
+    internal val voiceDraftNavigationGuard = VoiceDraftNavigationGuard()
 
     private val timelineController = TimelineController(room, room.liveTimeline)
     private val presenter = presenterFactory.create(
@@ -126,7 +129,7 @@ class MessagesNode(
     interface Callback : Plugin {
         fun handleEventClick(timelineMode: Timeline.Mode, event: TimelineItem.Event, canUseOverlay: Boolean): Boolean
         fun handleGalleryItemClick(timelineMode: Timeline.Mode, event: TimelineItem.Event, galleryItemIndex: Int, canUseOverlay: Boolean): Boolean
-        fun navigateToPreviewAttachments(attachments: ImmutableList<Attachment>, inReplyToEventId: EventId?)
+        fun navigateToPreviewAttachments(attachments: ImmutableList<Attachment>, inReplyToEventId: EventId?, captionDraft: AttachmentCaptionDraft?)
         fun navigateToRoomMemberDetails(userId: UserId)
         fun handlePermalinkClick(data: PermalinkData)
         fun navigateToEventDebugInfo(eventId: EventId?, debugInfo: TimelineItemDebugInfo)
@@ -163,7 +166,7 @@ class MessagesNode(
         )
     }
 
-    private fun onLinkClick(
+    internal fun onLinkClick(
         activity: Activity,
         darkTheme: Boolean,
         url: String,
@@ -174,20 +177,20 @@ class MessagesNode(
             is PermalinkData.UserLink -> {
                 // Open the room member profile, it will fallback to
                 // the user profile if the user is not in the room
-                callback.navigateToRoomMemberDetails(permalink.userId)
+                voiceDraftNavigationGuard.navigate { callback.navigateToRoomMemberDetails(permalink.userId) }
             }
             is PermalinkData.RoomLink -> {
                 handleRoomLinkClick(permalink, eventSink)
             }
             is PermalinkData.FallbackLink -> {
                 if (customTab) {
-                    activity.openUrlInChromeCustomTab(null, darkTheme, url)
+                    voiceDraftNavigationGuard.navigate { activity.openUrlInChromeCustomTab(null, darkTheme, url) }
                 } else {
-                    activity.openUrlInExternalApp(url)
+                    voiceDraftNavigationGuard.navigate { activity.openUrlInExternalApp(url) }
                 }
             }
             is PermalinkData.RoomEmailInviteLink -> {
-                activity.openUrlInChromeCustomTab(null, darkTheme, url)
+                voiceDraftNavigationGuard.navigate { activity.openUrlInChromeCustomTab(null, darkTheme, url) }
             }
         }
     }
@@ -205,28 +208,28 @@ class MessagesNode(
                 displaySameRoomToast()
             }
         } else {
-            callback.handlePermalinkClick(roomLink)
+            voiceDraftNavigationGuard.navigate { callback.handlePermalinkClick(roomLink) }
         }
     }
 
     override fun navigateToEventDebugInfo(eventId: EventId?, debugInfo: TimelineItemDebugInfo) {
-        callback.navigateToEventDebugInfo(eventId, debugInfo)
+        voiceDraftNavigationGuard.navigate { callback.navigateToEventDebugInfo(eventId, debugInfo) }
     }
 
     override fun forwardEvent(eventId: EventId) {
-        callback.forwardEvent(eventId)
+        voiceDraftNavigationGuard.navigate { callback.forwardEvent(eventId) }
     }
 
     override fun navigateToReportMessage(eventId: EventId, senderId: UserId) {
-        callback.navigateToReportMessage(eventId, senderId)
+        voiceDraftNavigationGuard.navigate { callback.navigateToReportMessage(eventId, senderId) }
     }
 
     override fun navigateToEditPoll(eventId: EventId) {
-        callback.navigateToEditPoll(eventId)
+        voiceDraftNavigationGuard.navigate { callback.navigateToEditPoll(eventId) }
     }
 
-    override fun navigateToPreviewAttachments(attachments: ImmutableList<Attachment>, inReplyToEventId: EventId?) {
-        callback.navigateToPreviewAttachments(attachments, inReplyToEventId)
+    override fun navigateToPreviewAttachments(attachments: ImmutableList<Attachment>, inReplyToEventId: EventId?, captionDraft: AttachmentCaptionDraft?) {
+        voiceDraftNavigationGuard.navigate { callback.navigateToPreviewAttachments(attachments, inReplyToEventId, captionDraft) }
     }
 
     override fun navigateToRoom(roomId: RoomId, eventId: EventId?, serverNames: List<String>) {
@@ -234,31 +237,31 @@ class MessagesNode(
             displaySameRoomToast()
         } else {
             val permalinkData = PermalinkData.RoomLink(roomId.toRoomIdOrAlias(), eventId, viaParameters = serverNames.toImmutableList())
-            callback.handlePermalinkClick(permalinkData)
+            voiceDraftNavigationGuard.navigate { callback.handlePermalinkClick(permalinkData) }
         }
     }
 
     override fun navigateToMember(userId: UserId) {
-        callback.navigateToRoomMemberDetails(userId)
+        voiceDraftNavigationGuard.navigate { callback.navigateToRoomMemberDetails(userId) }
     }
 
     override fun navigateToThread(threadRootId: ThreadId, focusedEventId: EventId?) {
-        callback.navigateToThread(threadRootId, focusedEventId)
+        voiceDraftNavigationGuard.navigate { callback.navigateToThread(threadRootId, focusedEventId) }
     }
 
     override fun navigateToDeveloperSettings() {
-        callback.navigateToDeveloperSettings()
+        voiceDraftNavigationGuard.navigate { callback.navigateToDeveloperSettings() }
     }
 
     override fun navigateToCurrentLiveLocation() {
-        callback.navigateToCurrentLiveLocation()
+        voiceDraftNavigationGuard.navigate { callback.navigateToCurrentLiveLocation() }
     }
 
     private fun displaySameRoomToast() {
         context.toast(CommonStrings.screen_room_permalink_same_room_android)
     }
 
-    override fun close() = navigateUp()
+    override fun close() = voiceDraftNavigationGuard.navigate { navigateUp() }
 
     @Composable
     override fun View(modifier: Modifier) {
@@ -283,6 +286,7 @@ class MessagesNode(
             }
             MessagesView(
                 state = state,
+                voiceDraftNavigationGuard = voiceDraftNavigationGuard,
                 onBackClick = { state.eventSink(MessagesEvent.MarkAsFullyReadAndExit) },
                 onRoomDetailsClick = callback::navigateToRoomDetails,
                 onEventContentClick = { isLive, event ->
@@ -309,7 +313,7 @@ class MessagesNode(
                         }
                     }
                 },
-                onUserDataClick = callback::navigateToRoomMemberDetails,
+                onUserDataClick = ::navigateToMember,
                 onLinkClick = { url, customTab ->
                     onLinkClick(
                         activity = activity,
@@ -347,13 +351,13 @@ class MessagesNode(
                 state = state.roomMemberModerationState,
                 onSelectAction = { action, target ->
                     when (action) {
-                        is ModerationAction.DisplayProfile -> callback.navigateToRoomMemberDetails(target.userId)
+                        is ModerationAction.DisplayProfile -> voiceDraftNavigationGuard.navigate { callback.navigateToRoomMemberDetails(target.userId) }
                         else -> state.roomMemberModerationState.eventSink(RoomMemberModerationEvent.ProcessAction(action, target))
                     }
                 },
                 onAvatarClick = { user ->
                     user.avatarUrl?.let { url ->
-                        callback.navigateToAvatarPreview(user.getBestName(), url)
+                        voiceDraftNavigationGuard.navigate { callback.navigateToAvatarPreview(user.getBestName(), url) }
                     }
                 },
                 modifier = Modifier,

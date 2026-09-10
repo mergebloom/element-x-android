@@ -84,11 +84,11 @@ internal fun VoiceMessagePreview(
         WaveformPlaybackView(
             modifier = Modifier
                 .weight(1f)
-                .height(26.dp),
+                .height(48.dp),
             playbackProgress = playbackProgress,
             showCursor = showCursor,
             waveform = waveform,
-            seekEnabled = true,
+            seekEnabled = isInteractive,
             onSeek = onSeek,
         )
     }
@@ -109,7 +109,7 @@ private fun PlayerButton(
         onClick = onClick,
         modifier = Modifier
             .background(color = ElementTheme.colors.bgCanvasDefault, shape = CircleShape)
-            .size(30.dp),
+            .size(48.dp),
         enabled = enabled,
         colors = IconButtonDefaults.iconButtonColors(
             contentColor = ElementTheme.colors.iconSecondary,

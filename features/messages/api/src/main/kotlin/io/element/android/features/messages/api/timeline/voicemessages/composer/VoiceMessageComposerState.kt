@@ -18,4 +18,6 @@ data class VoiceMessageComposerState(
     val showSendFailureDialog: Boolean,
     val keepScreenOn: Boolean,
     val eventSink: (VoiceMessageComposerEvent) -> Unit,
+    val microphoneReady: Boolean = false,
+    val recordingError: Boolean = false,
 )

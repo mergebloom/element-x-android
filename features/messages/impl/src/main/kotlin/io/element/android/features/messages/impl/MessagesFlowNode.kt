@@ -39,6 +39,7 @@ import io.element.android.features.location.api.ShowLocationMode
 import io.element.android.features.messages.api.MessagesEntryPoint
 import io.element.android.features.messages.impl.attachments.Attachment
 import io.element.android.features.messages.impl.attachments.preview.AttachmentsPreviewNode
+import io.element.android.features.messages.impl.messagecomposer.AttachmentCaptionDraft
 import io.element.android.features.messages.impl.pinned.DefaultPinnedEventsTimelineProvider
 import io.element.android.features.messages.impl.pinned.list.PinnedMessagesListNode
 import io.element.android.features.messages.impl.report.ReportMessageNode
@@ -169,7 +170,12 @@ class MessagesFlowNode(
         ) : NavTarget
 
         @Parcelize
-        data class AttachmentPreview(val timelineMode: Timeline.Mode, val attachments: ImmutableList<Attachment>, val inReplyToEventId: EventId?) : NavTarget
+        data class AttachmentPreview(
+            val timelineMode: Timeline.Mode,
+            val attachments: ImmutableList<Attachment>,
+            val inReplyToEventId: EventId?,
+            val captionDraft: AttachmentCaptionDraft?,
+        ) : NavTarget
 
         @Parcelize
         data class LocationViewer(val mode: ShowLocationMode) : NavTarget
@@ -281,12 +287,17 @@ class MessagesFlowNode(
                         )
                     }
 
-                    override fun navigateToPreviewAttachments(attachments: ImmutableList<Attachment>, inReplyToEventId: EventId?) {
+                    override fun navigateToPreviewAttachments(
+                        attachments: ImmutableList<Attachment>,
+                        inReplyToEventId: EventId?,
+                        captionDraft: AttachmentCaptionDraft?,
+                    ) {
                         backstack.push(
                             NavTarget.AttachmentPreview(
                                 attachments = attachments,
                                 timelineMode = Timeline.Mode.Live,
                                 inReplyToEventId = inReplyToEventId,
+                                captionDraft = captionDraft,
                             )
                         )
                     }
@@ -443,6 +454,7 @@ class MessagesFlowNode(
                     attachments = navTarget.attachments,
                     timelineMode = navTarget.timelineMode,
                     inReplyToEventId = navTarget.inReplyToEventId,
+                    captionDraft = navTarget.captionDraft,
                 )
                 createNode<AttachmentsPreviewNode>(buildContext, listOf(inputs))
             }
@@ -595,12 +607,17 @@ class MessagesFlowNode(
                         )
                     }
 
-                    override fun navigateToPreviewAttachments(attachments: ImmutableList<Attachment>, inReplyToEventId: EventId?) {
+                    override fun navigateToPreviewAttachments(
+                        attachments: ImmutableList<Attachment>,
+                        inReplyToEventId: EventId?,
+                        captionDraft: AttachmentCaptionDraft?,
+                    ) {
                         backstack.push(
                             NavTarget.AttachmentPreview(
                                 attachments = attachments,
                                 timelineMode = Timeline.Mode.Thread(navTarget.threadRootId),
                                 inReplyToEventId = inReplyToEventId,
+                                captionDraft = captionDraft,
                             )
                         )
                     }

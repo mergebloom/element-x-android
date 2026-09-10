@@ -2022,7 +2022,7 @@ class MessageComposerPresenterTest : RobolectricTest() {
         return normalState
     }
 
-    private fun TestScope.createPresenter(
+    internal fun TestScope.createPresenter(
         room: JoinedRoom = FakeJoinedRoom(
             typingNoticeResult = { Result.success(Unit) }
         ),
@@ -2049,6 +2049,7 @@ class MessageComposerPresenterTest : RobolectricTest() {
         slashCommandService: SlashCommandService = FakeSlashCommandService(),
         featureFlagService: FakeFeatureFlagService = FakeFeatureFlagService(),
         timelineController: TimelineController = TimelineController(room, timeline),
+        captionDrafts: AttachmentCaptionDrafts = AttachmentCaptionDrafts(),
     ) = MessageComposerPresenter(
         navigator = navigator,
         sessionCoroutineScope = this,
@@ -2090,6 +2091,7 @@ class MessageComposerPresenterTest : RobolectricTest() {
         featureFlagService = featureFlagService,
         contentScannerService = { _, _ -> },
         contentValidationCache = InMemoryEventContentValidationCache(),
+        captionDrafts = captionDrafts,
     ).apply {
         isTesting = true
         showTextFormatting = isRichTextEditorEnabled

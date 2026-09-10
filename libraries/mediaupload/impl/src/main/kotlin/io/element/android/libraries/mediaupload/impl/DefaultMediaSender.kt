@@ -28,7 +28,6 @@ import io.element.android.libraries.mediaupload.api.MediaSenderFactory
 import io.element.android.libraries.mediaupload.api.MediaSenderRoomFactory
 import io.element.android.libraries.mediaupload.api.MediaUploadInfo
 import io.element.android.libraries.mediaupload.api.toGalleryItemInfo
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import timber.log.Timber
 import java.io.File
@@ -90,6 +89,7 @@ class DefaultMediaSender(
                 mimeType = mimeType,
                 deleteOriginal = false,
                 mediaOptimizationConfig = mediaOptimizationConfig,
+                keepSourceForRetry = true,
             )
     }
 
@@ -148,8 +148,10 @@ class DefaultMediaSender(
             .process(
                 uri = uri,
                 mimeType = mimeType,
-                deleteOriginal = true,
+                // The recorder owns the original until send succeeds or the user discards.
+                deleteOriginal = false,
                 mediaOptimizationConfig = mediaOptimizationConfigProvider.get(),
+                keepSourceForRetry = true,
             )
             .flatMapCatching { info ->
                 val audioInfo = (info as MediaUploadInfo.Audio).audioInfo
@@ -186,6 +188,7 @@ class DefaultMediaSender(
             )
         }
             .flatMapCatching { uploadHandler ->
+                ongoingUploadJobs[Job] = uploadHandler
                 uploadHandler.await()
             }
             .handleSendResult(galleryLogId)
@@ -195,9 +198,7 @@ class DefaultMediaSender(
         .onFailure { error ->
             val job = ongoingUploadJobs.remove(Job)
             Timber.e(error, "Sending media $mediaId failed. Removing ongoing upload job. Total: ${ongoingUploadJobs.size}")
-            if (error !is CancellationException) {
-                job?.cancel()
-            }
+            job?.cancel()
         }
         .onSuccess {
             Timber.d("Sent media $mediaId successfully. Removing ongoing upload job. Total: ${ongoingUploadJobs.size}")
@@ -265,7 +266,8 @@ class DefaultMediaSender(
             .mapCatching { uploadHandler ->
                 Timber.d("Added ongoing upload job, total: ${ongoingUploadJobs.size + 1}")
                 ongoingUploadJobs[Job] = uploadHandler
-                uploadHandler.await()
+                // Flatten the handler Result: an upload failure is not a successful enqueue.
+                uploadHandler.await().getOrThrow()
             }
     }
 

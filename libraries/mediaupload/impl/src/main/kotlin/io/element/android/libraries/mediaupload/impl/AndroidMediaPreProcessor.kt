@@ -81,6 +81,7 @@ class AndroidMediaPreProcessor(
         mimeType: String,
         deleteOriginal: Boolean,
         mediaOptimizationConfig: MediaOptimizationConfig,
+        keepSourceForRetry: Boolean,
     ): Result<MediaUploadInfo> = withContext(coroutineDispatchers.computation) {
         runCatchingExceptions {
             val resolvedMimeType = mimeType.ensureDefaultSubtype()
@@ -95,12 +96,13 @@ class AndroidMediaPreProcessor(
                 resolvedMimeType.isMimeTypeAudio() -> processAudio(uri, resolvedMimeType)
                 else -> processFile(uri, resolvedMimeType)
             }
+            require(!(deleteOriginal && keepSourceForRetry)) { "Cannot delete a retained source" }
             if (deleteOriginal) {
                 tryOrNull {
                     Timber.w("Deleting original uri $uri")
                     contentResolver.delete(uri, null, null)
                 }
-            } else {
+            } else if (!keepSourceForRetry) {
                 temporaryUriDeleter.delete(uri)
             }
             result.postProcess(uri)
@@ -108,27 +110,13 @@ class AndroidMediaPreProcessor(
     }.mapFailure { MediaPreProcessor.Failure(it) }
 
     override fun cleanUp() {
-        Timber.d("Cleaning up temporary media files")
-
-        // Clear temporary files created in older versions of the app
-        cacheDir.listFiles()?.onEach { file ->
-            if (file.isFile) {
-                val nameWithoutExtension = file.nameWithoutExtension
-                // UUIDs are 36 characters long, so we check if we can take those 36 characters
-                val nameWithoutExtensionAndRandom = if (nameWithoutExtension.length > 36) {
-                    nameWithoutExtension.substring(0, 36)
-                } else {
-                    // Not a temp file
-                    return@onEach
-                }
-                val isUUID = tryOrNull { UUID.fromString(nameWithoutExtensionAndRandom) } != null
-                if (isUUID && file.extension.isNotEmpty()) {
-                    file.delete()
-                }
-            }
-        }
-        // Clear temporary files created by this pre-processor in the separate uploads directory
-        baseTmpFileDir.listFiles()?.onEach { it.delete() }
+        // Never purge UUID files from the shared cache: current thumbnails and
+        // in-progress copies use that naming too. Each caller owns its files.
+        // Only old empty attempt directories are disposable here; the age bound
+        // excludes a directory just created by a concurrent postProcess.
+        val cutoff = System.currentTimeMillis() - java.util.concurrent.TimeUnit.DAYS.toMillis(1)
+        baseTmpFileDir.listFiles()?.filter { it.isDirectory && it.lastModified() < cutoff }
+            ?.forEach { it.delete() } // Non-empty directories are left untouched.
     }
 
     private suspend fun processFile(uri: Uri, mimeType: String): MediaUploadInfo {
@@ -146,7 +134,11 @@ class AndroidMediaPreProcessor(
     private fun MediaUploadInfo.postProcess(uri: Uri): MediaUploadInfo {
         Timber.d("Finished processing, post-processing ${uri.path.orEmpty().hash()}")
         val name = context.getFileName(uri) ?: return this
-        val renamedFile = File(context.cacheDir, name).also {
+        // Preserve the visible filename without aliasing the camera/voice source
+        // or another active upload with the same name. Native handlers delete
+        // prepared files on failure too, so each attempt must own a distinct copy.
+        val directory = File(baseTmpFileDir, UUID.randomUUID().toString()).apply { mkdirs() }
+        val renamedFile = File(directory, File(name).name).also {
             file.safeRenameTo(it)
         }
         return when (this) {
