@@ -1,0 +1,13 @@
+// Hosted-only validation: bound the aggregate JVM budget and load the real
+// matching rich-editor Rust runtime, not the Android ELF or a mocked connection.
+allprojects {
+    tasks.withType(Test).configureEach {
+        maxParallelForks = 1
+        maxHeapSize = '1g'
+        jvmArgs '-XX:ActiveProcessorCount=2'
+        def nativeDir = new File(System.getenv('RUNNER_TEMP'), 'rich-editor/target/debug').absolutePath
+        systemProperty 'jna.boot.library.path', nativeDir
+        systemProperty 'jna.library.path', nativeDir
+        systemProperty 'java.library.path', nativeDir
+    }
+}

@@ -99,6 +99,7 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -146,6 +147,7 @@ class MessageComposerPresenter(
     private val featureFlagService: FeatureFlagService,
     private val contentScannerService: ContentScannerService,
     private val contentValidationCache: EventContentValidationCache,
+    private val captionDrafts: AttachmentCaptionDrafts = AttachmentCaptionDrafts(),
 ) : Presenter<MessageComposerState> {
     @AssistedFactory
     interface Factory {
@@ -161,6 +163,14 @@ class MessageComposerPresenter(
 
     private val cameraPermissionPresenter = permissionsPresenterFactory.create(Manifest.permission.CAMERA)
     private var pendingEvent: MessageComposerEvent? = null
+    private var pendingCaptionDraft: AttachmentCaptionDraft? = null
+    private var pickerReplyTo: EventId? = null
+    private var composerRevision = 0L
+
+    // A caption lease outlives its composer's composition. Keep the source text (and
+    // its edit revision) authoritative over the outgoing node's saveable snapshot.
+    private var captionSourceEditor: MarkdownTextEditorState? = null
+    private var persistentDraftUpdate: Job? = null
     private val suggestionSearchTrigger = MutableStateFlow<Suggestion?>(null)
 
     // Used to disable some UI related elements in tests
@@ -181,7 +191,16 @@ class MessageComposerPresenter(
         if (isTesting) {
             richTextEditorState.isReadyToProcessActions = true
         }
-        val markdownTextEditorState = rememberMarkdownTextEditorState(initialText = null, initialFocus = false)
+        val savedMarkdownTextEditorState = rememberMarkdownTextEditorState(initialText = null, initialFocus = false)
+        val markdownTextEditorState = remember(savedMarkdownTextEditorState) {
+            savedMarkdownTextEditorState.apply {
+                captionSourceEditor?.let { source ->
+                    text = source.text
+                    selection = source.selection
+                    captionSourceEditor = this
+                }
+            }
+        }
 
         val cameraPermissionState = cameraPermissionPresenter.present()
 
@@ -256,20 +275,70 @@ class MessageComposerPresenter(
         val slashCommandAction = remember { mutableStateOf<AsyncAction<Unit>>(AsyncAction.Uninitialized) }
 
         LaunchedEffect(Unit) {
+            // After a handoff, the retained source is newer than both saved UI and
+            // storage (whose consume/restore write may still be pending).
+            if (captionSourceEditor != null) return@LaunchedEffect
             val draft = draftService.loadDraft(
                 roomId = room.roomId,
                 threadRoot = threadRoot,
                 isVolatile = false
             )
-            if (draft != null) {
+            if (draft != null && captionSourceEditor == null) {
                 applyDraft(draft, markdownTextEditorState, richTextEditorState)
             }
+        }
+
+        fun captureAttachmentDraft() {
+            pendingCaptionDraft?.let(captionDrafts::discard)
+            pendingCaptionDraft = null
+            val mode = messageComposerContext.composerMode
+            pickerReplyTo = (mode as? MessageComposerMode.Reply)?.eventId
+            if (mode.isEditing) return
+            captionSourceEditor = markdownTextEditorState
+            val rich = showTextFormatting
+            val caption = if (rich) richTextEditorState.messageMarkdown else markdownTextEditorState.getMessageMarkdown(permalinkBuilder)
+            val revision = composerRevision
+            val textRevision = markdownTextEditorState.text.revision
+            val html = richTextEditorState.messageHtml
+            fun stillOwned() = composerRevision == revision && markdownTextEditorState.text.revision == textRevision &&
+                richTextEditorState.messageHtml == html && showTextFormatting == rich && messageComposerContext.composerMode == mode
+            fun saveCurrentDraft() {
+                val draft = createDraftFromState(markdownTextEditorState, richTextEditorState)
+                sessionCoroutineScope.updateDraft(draft, isVolatile = false)
+            }
+            pendingCaptionDraft = captionDrafts.capture(
+                caption = caption,
+                plainTextConversion = rich,
+                restore = { editedCaption ->
+                    if (!stillOwned()) {
+                        false
+                    } else {
+                        // Unchanged cancellation preserves original spans/rich content exactly.
+                        if (editedCaption != caption) {
+                            markdownTextEditorState.text.update(editedCaption, true)
+                            showTextFormatting = false
+                            saveCurrentDraft()
+                        }
+                        true
+                    }
+                },
+                consume = {
+                    if (stillOwned()) {
+                        markdownTextEditorState.text.update("", true)
+                        captionSourceEditor?.selection = IntRange.EMPTY
+                        showTextFormatting = false
+                        messageComposerContext.composerMode = MessageComposerMode.Normal
+                        saveCurrentDraft()
+                    }
+                },
+            )
         }
 
         fun handleEvent(event: MessageComposerEvent) {
             when (event) {
                 MessageComposerEvent.ToggleFullScreenState -> isFullScreen.value = !isFullScreen.value
                 MessageComposerEvent.CloseSpecialMode -> {
+                    composerRevision++
                     if (messageComposerContext.composerMode.isEditing) {
                         localCoroutineScope.launch {
                             resetComposer(markdownTextEditorState, richTextEditorState, fromEdit = true)
@@ -311,6 +380,7 @@ class MessageComposerPresenter(
                     resetComposerModeAfterAttaching()
                 }
                 is MessageComposerEvent.SetMode -> {
+                    composerRevision++
                     localCoroutineScope.setMode(event.composerMode, markdownTextEditorState, richTextEditorState)
                 }
                 MessageComposerEvent.AddAttachment -> localCoroutineScope.launch {
@@ -319,7 +389,8 @@ class MessageComposerPresenter(
                 MessageComposerEvent.DismissAttachmentMenu -> showAttachmentSourcePicker = false
                 MessageComposerEvent.PickAttachmentSource.FromGallery -> localCoroutineScope.launch {
                     showAttachmentSourcePicker = false
-                    if (isSendGalleryMessagesEnabled) {
+                    captureAttachmentDraft()
+                    if (isSendGalleryMessagesEnabled && pendingCaptionDraft?.caption.isNullOrEmpty()) {
                         galleryMultiMediaPicker.launch()
                     } else {
                         galleryMediaPicker.launch()
@@ -327,7 +398,8 @@ class MessageComposerPresenter(
                 }
                 MessageComposerEvent.PickAttachmentSource.FromFiles -> localCoroutineScope.launch {
                     showAttachmentSourcePicker = false
-                    if (isSendGalleryMessagesEnabled) {
+                    captureAttachmentDraft()
+                    if (isSendGalleryMessagesEnabled && pendingCaptionDraft?.caption.isNullOrEmpty()) {
                         filesPicker.launch()
                     } else {
                         fileSinglePicker.launch()
@@ -335,6 +407,7 @@ class MessageComposerPresenter(
                 }
                 MessageComposerEvent.PickAttachmentSource.PhotoFromCamera -> localCoroutineScope.launch {
                     showAttachmentSourcePicker = false
+                    captureAttachmentDraft()
                     if (cameraPermissionState.permissionGranted) {
                         cameraPhotoPicker.launch()
                     } else {
@@ -344,6 +417,7 @@ class MessageComposerPresenter(
                 }
                 MessageComposerEvent.PickAttachmentSource.VideoFromCamera -> localCoroutineScope.launch {
                     showAttachmentSourcePicker = false
+                    captureAttachmentDraft()
                     if (cameraPermissionState.permissionGranted) {
                         cameraVideoPicker.launch()
                     } else {
@@ -360,11 +434,17 @@ class MessageComposerPresenter(
                     // Navigation to the create poll screen is done at the view layer
                 }
                 is MessageComposerEvent.ToggleTextFormatting -> {
+                    composerRevision++
                     showAttachmentSourcePicker = false
                     localCoroutineScope.toggleTextFormatting(event.enabled, markdownTextEditorState, richTextEditorState)
                 }
                 is MessageComposerEvent.Error -> {
                     analyticsService.trackError(event.error)
+                }
+                MessageComposerEvent.InputChanged -> {
+                    // The rich Android view reports its initial saved-HTML hydration
+                    // before subscribing to actions. Reattaching is not a new edit.
+                    if (!showTextFormatting || richTextEditorState.isReadyToProcessActions) composerRevision++
                 }
                 is MessageComposerEvent.TypingNotice -> {
                     if (sendTypingNotifications) {
@@ -660,7 +740,11 @@ class MessageComposerPresenter(
         mimeType: String? = null,
         sendAsFile: Boolean = false,
     ) {
-        uri ?: return
+        if (uri == null) {
+            pendingCaptionDraft?.let(captionDrafts::discard)
+            pendingCaptionDraft = null
+            return
+        }
         val localMedia = localMediaFactory.createFromUri(
             uri = uri,
             mimeType = mimeType,
@@ -668,17 +752,20 @@ class MessageComposerPresenter(
             formattedFileSize = null
         )
         val mediaAttachment = Attachment.Media(localMedia, sendAsFile = sendAsFile)
-        val inReplyToEventId = (messageComposerContext.composerMode as? MessageComposerMode.Reply)?.eventId
-        navigator.navigateToPreviewAttachments(persistentListOf(mediaAttachment), inReplyToEventId)
-
-        resetComposerModeAfterAttaching()
+        val captionDraft = pendingCaptionDraft
+        pendingCaptionDraft = null
+        navigator.navigateToPreviewAttachments(persistentListOf(mediaAttachment), pickerReplyTo, captionDraft)
     }
 
     private fun handlePickedMediaList(
         uris: List<Uri>,
         sendAsFile: Boolean = false,
     ) {
-        if (uris.isEmpty()) return
+        if (uris.isEmpty()) {
+            pendingCaptionDraft?.let(captionDrafts::discard)
+            pendingCaptionDraft = null
+            return
+        }
         if (uris.size == 1) {
             handlePickedMedia(uris.first(), sendAsFile = sendAsFile)
             return
@@ -692,10 +779,11 @@ class MessageComposerPresenter(
             )
             Attachment.Media(localMedia, sendAsFile = sendAsFile)
         }.toImmutableList()
-        val inReplyToEventId = (messageComposerContext.composerMode as? MessageComposerMode.Reply)?.eventId
-        navigator.navigateToPreviewAttachments(attachments, inReplyToEventId)
-
-        resetComposerModeAfterAttaching()
+        val captionDraft = pendingCaptionDraft
+        pendingCaptionDraft = null
+        // An empty caption still leases the reply target. Consume it only after
+        // success, just like the single-attachment path.
+        navigator.navigateToPreviewAttachments(attachments, pickerReplyTo, captionDraft)
     }
 
     private fun resetComposerModeAfterAttaching() {
@@ -731,13 +819,19 @@ class MessageComposerPresenter(
     private fun CoroutineScope.updateDraft(
         draft: ComposerDraft?,
         isVolatile: Boolean,
-    ) = launch {
-        draftService.updateDraft(
-            roomId = room.roomId,
-            draft = draft,
-            isVolatile = isVolatile,
-            threadRoot = threadRoot,
-        )
+    ): Job {
+        // A delayed caption clear must not finish after a newer SaveDraft write.
+        // Keep volatile edit recovery separate from the persistent room/thread slot.
+        val previousUpdate = persistentDraftUpdate.takeUnless { isVolatile }
+        return launch {
+            previousUpdate?.join()
+            draftService.updateDraft(
+                roomId = room.roomId,
+                draft = draft,
+                isVolatile = isVolatile,
+                threadRoot = threadRoot,
+            )
+        }.also { if (!isVolatile) persistentDraftUpdate = it }
     }
 
     private suspend fun applyDraft(

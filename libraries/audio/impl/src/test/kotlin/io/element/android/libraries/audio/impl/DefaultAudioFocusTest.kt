@@ -51,8 +51,10 @@ class DefaultAudioFocusTest : RobolectricTest() {
     }
 
     @Test
-    fun `a transient focus loss does not stop a voice message recording`() {
-        assertThat(losesFocusOn(AudioFocusRequester.RecordVoiceMessage, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)).isFalse()
+    fun `any focus loss stops a voice message recording for review`() {
+        assertThat(losesFocusOn(AudioFocusRequester.RecordVoiceMessage, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)).isTrue()
+        assertThat(losesFocusOn(AudioFocusRequester.RecordVoiceMessage, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK)).isTrue()
+        assertThat(losesFocusOn(AudioFocusRequester.RecordVoiceMessage, AudioManager.AUDIOFOCUS_LOSS)).isTrue()
     }
 
     @Test

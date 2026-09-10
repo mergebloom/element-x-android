@@ -2,4 +2,16 @@
 <resources>
     <string name="screen_thread_timeline_unavailable">Thread unavailable</string>
     <string name="screen_thread_timeline_unavailable_description">This thread could not be opened. Go back and try again.</string>
+    <string name="screen_caption_single_attachment_hint">Your text will become the caption for one photo, video or file. Stickers and pasted media keep your text separate.</string>
+    <string name="screen_caption_plain_text">Captions use plain text. Cancelling without caption changes keeps the original formatting.</string>
+    <string name="screen_caption_draft_conflict_title">Keep your attachment draft?</string>
+    <string name="screen_caption_draft_conflict_body">Your message draft has changed. Keep editing this attachment, or discard it and keep your current message. Neither draft will be overwritten.</string>
+    <string name="screen_caption_discard_attachment">Discard draft</string>
+    <string name="screen_caption_keep_editing">Keep editing</string>
+    <string name="screen_voice_ready">Microphone ready. Tap or hold to record.</string>
+    <string name="screen_voice_error">Recording could not start. Your message draft is safe. Try again.</string>
+    <string name="screen_voice_leave_title">Keep this voice draft?</string>
+    <string name="screen_voice_leave_body">Keep it here to review and send, or discard it before leaving. Voice drafts are not saved after the app closes.</string>
+    <string name="screen_voice_keep">Keep voice draft</string>
+    <string name="screen_voice_discard">Discard voice draft</string>
 </resources>

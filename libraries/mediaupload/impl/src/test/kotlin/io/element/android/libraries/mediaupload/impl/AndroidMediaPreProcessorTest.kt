@@ -548,6 +548,69 @@ class AndroidMediaPreProcessorTest : RobolectricTest() {
         assertThat(failure?.cause).isInstanceOf(FileNotFoundException::class.java)
     }
 
+    @Test
+    fun `prepared upload never aliases a recoverable camera source`() = runTest {
+        val context = InstrumentationRegistry.getInstrumentation().context
+        val source = File(context.cacheDir, "photo.jpg").apply { writeText("synthetic recoverable source") }
+        val processor = createAndroidMediaPreProcessor(context)
+        val prepared = processor.process(
+            uri = source.toUri(),
+            mimeType = MimeTypes.PlainText,
+            deleteOriginal = false,
+            mediaOptimizationConfig = MediaOptimizationConfig(false, VideoCompressionPreset.STANDARD),
+            keepSourceForRetry = true,
+        ).getOrThrow()
+        assertThat(prepared.file.canonicalPath).isNotEqualTo(source.canonicalPath)
+        // Native upload completion deletes prepared files on failure as well as success.
+        prepared.file.delete()
+        assertThat(source.readText()).isEqualTo("synthetic recoverable source")
+        val retried = processor.process(
+            uri = source.toUri(),
+            mimeType = MimeTypes.PlainText,
+            deleteOriginal = false,
+            mediaOptimizationConfig = MediaOptimizationConfig(false, VideoCompressionPreset.STANDARD),
+            keepSourceForRetry = true,
+        ).getOrThrow()
+        assertThat(retried.file.readText()).isEqualTo(source.readText())
+    }
+
+    @Test
+    @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    fun `real jpeg retry and shared cleanup retain original main file and thumbnail`() = runTest {
+        val context = InstrumentationRegistry.getInstrumentation().context
+        val source = getFileFromAssets(context, assetImageJpeg.filename)
+        val originalBytes = source.readBytes()
+        val processor = createAndroidMediaPreProcessor(context, sdkIntVersion = Build.VERSION_CODES.TIRAMISU)
+        suspend fun prepare() = processor.process(
+            source.toUri(),
+            MimeTypes.Jpeg,
+            false,
+            MediaOptimizationConfig(false, VideoCompressionPreset.STANDARD),
+            keepSourceForRetry = true,
+        ).getOrThrow()
+        val first = prepare() as MediaUploadInfo.Image
+        assertThat(first.file.canonicalPath).isNotEqualTo(source.canonicalPath)
+        assertThat(first.imageInfo.mimetype).isEqualTo(MimeTypes.Jpeg)
+        val thumbnail = requireNotNull(first.thumbnailFile)
+        assertThat(thumbnail.length()).isGreaterThan(0L)
+        val inProgress = File(context.cacheDir, "uploads/in-progress-copy.tmp").apply {
+            parentFile!!.mkdirs()
+            writeText("pending")
+        }
+        processor.cleanUp()
+        assertThat(first.file.exists()).isTrue()
+        assertThat(thumbnail.exists()).isTrue()
+        assertThat(inProgress.readText()).isEqualTo("pending")
+        // Model native handler failure cleanup; a fresh preparation must succeed.
+        first.file.delete()
+        thumbnail.delete()
+        assertThat(source.readBytes()).isEqualTo(originalBytes)
+        val second = prepare() as MediaUploadInfo.Image
+        assertThat(second.file.exists()).isTrue()
+        assertThat(requireNotNull(second.thumbnailFile).length()).isGreaterThan(0L)
+        assertThat(source.readBytes()).isEqualTo(originalBytes)
+    }
+
     private fun TestScope.createAndroidMediaPreProcessor(
         context: Context,
         sdkIntVersion: Int = Build.VERSION_CODES.P,

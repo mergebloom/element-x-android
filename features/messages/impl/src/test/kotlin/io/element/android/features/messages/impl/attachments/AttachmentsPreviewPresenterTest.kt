@@ -26,6 +26,8 @@ import io.element.android.features.messages.impl.attachments.video.MediaOptimiza
 import io.element.android.features.messages.impl.attachments.video.VideoCompressionPresetSelector
 import io.element.android.features.messages.impl.attachments.video.VideoUploadEstimation
 import io.element.android.features.messages.impl.fixtures.aMediaAttachment
+import io.element.android.features.messages.impl.messagecomposer.AttachmentCaptionDraft
+import io.element.android.features.messages.impl.messagecomposer.AttachmentCaptionDrafts
 import io.element.android.features.messages.test.attachments.video.FakeMediaOptimizationSelectorPresenterFactory
 import io.element.android.libraries.androidutils.file.TemporaryUriDeleter
 import io.element.android.libraries.architecture.AsyncData
@@ -130,7 +132,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Done)
             sendFileResult.assertions().isCalledOnce()
             onDoneListener.assertions().isCalledOnce()
-            assertThat(mediaPreProcessor.cleanUpCallCount).isEqualTo(1)
+            assertThat(mediaPreProcessor.cleanUpCallCount).isEqualTo(0)
         }
     }
 
@@ -167,7 +169,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Done)
             sendFileResult.assertions().isCalledOnce()
             onDoneListener.assertions().isCalledOnce()
-            assertThat(mediaPreProcessor.cleanUpCallCount).isEqualTo(1)
+            assertThat(mediaPreProcessor.cleanUpCallCount).isEqualTo(0)
         }
     }
 
@@ -204,7 +206,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Done)
             sendFileResult.assertions().isCalledOnce()
             onDoneListener.assertions().isCalledOnce()
-            assertThat(mediaPreProcessor.cleanUpCallCount).isEqualTo(1)
+            assertThat(mediaPreProcessor.cleanUpCallCount).isEqualTo(0)
         }
     }
 
@@ -226,6 +228,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             assertThat(initialState.sendActionState).isEqualTo(SendActionState.Idle)
             initialState.eventSink(AttachmentsPreviewEvent.SendAttachment)
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Processing(displayProgress = false))
+            assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Processing(displayProgress = true))
             // Pre-processing finishes
             processLatch.complete(Unit)
             assertThat(awaitItem().sendActionState).isInstanceOf(SendActionState.Failure::class.java)
@@ -275,7 +278,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Done)
             deleteCallback.assertions().isCalledOnce()
             onDoneListener.assertions().isCalledOnce()
-            assertThat(mediaPreProcessor.cleanUpCallCount).isEqualTo(1)
+            assertThat(mediaPreProcessor.cleanUpCallCount).isEqualTo(0)
         }
     }
 
@@ -306,6 +309,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             initialState.textEditorState.setMarkdown(A_CAPTION)
             initialState.eventSink(AttachmentsPreviewEvent.SendAttachment)
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Processing(displayProgress = false))
+            assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Processing(displayProgress = true))
             assertThat(awaitItem().sendActionState).isInstanceOf(SendActionState.Sending.ReadyToUpload::class.java)
             assertThat(awaitItem().sendActionState).isInstanceOf(SendActionState.Sending.Uploading::class.java)
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Done)
@@ -348,6 +352,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             initialState.textEditorState.setMarkdown(A_CAPTION)
             initialState.eventSink(AttachmentsPreviewEvent.SendAttachment)
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Processing(displayProgress = false))
+            assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Processing(displayProgress = true))
             assertThat(awaitItem().sendActionState).isInstanceOf(SendActionState.Sending.ReadyToUpload::class.java)
             assertThat(awaitItem().sendActionState).isInstanceOf(SendActionState.Sending.Uploading::class.java)
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Done)
@@ -390,6 +395,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             initialState.textEditorState.setMarkdown(A_CAPTION)
             initialState.eventSink(AttachmentsPreviewEvent.SendAttachment)
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Processing(displayProgress = false))
+            assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Processing(displayProgress = true))
             assertThat(awaitItem().sendActionState).isInstanceOf(SendActionState.Sending.ReadyToUpload::class.java)
             assertThat(awaitItem().sendActionState).isInstanceOf(SendActionState.Sending.Uploading::class.java)
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Done)
@@ -424,6 +430,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             assertThat(initialState.sendActionState).isEqualTo(SendActionState.Idle)
             initialState.eventSink(AttachmentsPreviewEvent.SendAttachment)
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Processing(displayProgress = false))
+            assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Processing(displayProgress = true))
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.ReadyToUpload(listOf(mediaUploadInfo)))
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Uploading(listOf(mediaUploadInfo)))
             val failureState = awaitItem()
@@ -431,7 +438,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             sendFileResult.assertions().isCalledOnce()
             failureState.eventSink(AttachmentsPreviewEvent.CancelAndClearSendState)
             val clearedState = awaitLastSequentialItem()
-            assertThat(clearedState.sendActionState).isEqualTo(SendActionState.Sending.ReadyToUpload(listOf(mediaUploadInfo)))
+            assertThat(clearedState.sendActionState).isEqualTo(SendActionState.Idle)
         }
     }
 
@@ -454,11 +461,12 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             assertThat(initialState.sendActionState).isEqualTo(SendActionState.Idle)
             initialState.eventSink(AttachmentsPreviewEvent.SendAttachment)
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Processing(displayProgress = false))
+            assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Processing(displayProgress = true))
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.ReadyToUpload(listOf(mediaUploadInfo)))
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Uploading(listOf(mediaUploadInfo)))
             initialState.eventSink(AttachmentsPreviewEvent.CancelAndClearSendState)
-            assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.ReadyToUpload(listOf(mediaUploadInfo)))
-            // The sending is cancelled and the state is kept at ReadyToUpload
+            assertThat(consumeItemsUntilPredicate { it.sendActionState == SendActionState.Idle }.last().sendActionState).isEqualTo(SendActionState.Idle)
+            // Retry must prepare fresh files; the native handler may delete its old files.
             ensureAllEventsConsumed()
         }
     }
@@ -933,7 +941,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
         }
     }
 
-    private fun TestScope.createAttachmentsPreviewPresenter(
+    internal fun TestScope.createAttachmentsPreviewPresenter(
         attachments: List<Attachment> = listOf(
             aMediaAttachment(
                 aLocalMedia(
@@ -945,7 +953,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
         timelineMode: Timeline.Mode = Timeline.Mode.Live,
         permalinkBuilder: PermalinkBuilder = FakePermalinkBuilder(),
         mediaPreProcessor: MediaPreProcessor = FakeMediaPreProcessor(),
-        temporaryUriDeleter: TemporaryUriDeleter = FakeTemporaryUriDeleter(),
+        temporaryUriDeleter: TemporaryUriDeleter = FakeTemporaryUriDeleter {},
         onDoneListener: OnDoneListener = OnDoneListener { lambdaError() },
         displayMediaQualitySelectorViews: Boolean = false,
         mediaOptimizationSelectorPresenterFactory: FakeMediaOptimizationSelectorPresenterFactory = FakeMediaOptimizationSelectorPresenterFactory(
@@ -977,6 +985,9 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             }
         },
         videoCompressionPresetSelector: VideoCompressionPresetSelector = VideoCompressionPresetSelector(),
+        captionDraft: AttachmentCaptionDraft? = null,
+        captionDrafts: AttachmentCaptionDrafts = AttachmentCaptionDrafts(),
+        inReplyToEventId: EventId? = null,
     ): AttachmentsPreviewPresenter {
         return AttachmentsPreviewPresenter(
             attachments = attachments.toImmutableList(),
@@ -999,7 +1010,9 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             mediaOptimizationSelectorPresenterFactory = mediaOptimizationSelectorPresenterFactory,
             videoCompressionPresetSelector = videoCompressionPresetSelector,
             timelineMode = timelineMode,
-            inReplyToEventId = null,
+            inReplyToEventId = inReplyToEventId,
+            captionDraft = captionDraft,
+            captionDrafts = captionDrafts,
             mediaOptimizationConfigProvider = mediaOptimizationConfigProvider,
         )
     }

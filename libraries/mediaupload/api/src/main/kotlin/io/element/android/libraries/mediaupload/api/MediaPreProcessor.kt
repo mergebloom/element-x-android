@@ -21,6 +21,7 @@ interface MediaPreProcessor {
      * @param uri the media to process.
      * @param mimeType the MIME type of that media.
      * @param deleteOriginal whether to delete the source file once processing is done.
+     * @param keepSourceForRetry retain even app-owned temporary URIs until their draft owner confirms success/discard.
      * @param mediaOptimizationConfig how aggressively the media should be compressed.
      * @return a [Result] with the [MediaUploadInfo] containing all the info needed to begin the upload.
      */
@@ -29,6 +30,7 @@ interface MediaPreProcessor {
         mimeType: String,
         deleteOriginal: Boolean,
         mediaOptimizationConfig: MediaOptimizationConfig,
+        keepSourceForRetry: Boolean = false,
     ): Result<MediaUploadInfo>
 
     /**

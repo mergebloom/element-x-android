@@ -36,6 +36,8 @@ import io.element.android.libraries.core.extensions.runCatchingExceptions
 import io.element.android.libraries.di.annotations.ApplicationContext
 import io.element.android.libraries.preferences.api.store.VideoCompressionPreset
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -45,11 +47,15 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
 
-@Inject
-class VideoCompressor(
-    @ApplicationContext private val context: Context,
+class VideoCompressor internal constructor(
+    private val context: Context,
+    private val transformerFactory: (Transformer.Builder) -> Transformer,
 ) {
+    @Inject
+    constructor(@ApplicationContext context: Context) : this(context, { it.build() })
+
     @OptIn(UnstableApi::class)
     fun compress(uri: Uri, videoCompressionPreset: VideoCompressionPreset): Flow<VideoTranscodingEvent> = callbackFlow {
         val metadata = getVideoMetadata(uri)
@@ -109,31 +115,33 @@ class VideoCompressor(
             )
             .build()
 
-        val videoTransformer = Transformer.Builder(context)
-            .setVideoMimeType(MimeTypes.VIDEO_H264)
-            .setAudioMimeType(MimeTypes.AUDIO_AAC)
-            .setPortraitEncodingEnabled(false)
-            .setEncoderFactory(encoderFactory)
-            .setMuxerFactory(removeMetadataMuxer)
-            .addListener(object : Transformer.Listener {
-                override fun onCompleted(composition: Composition, exportResult: ExportResult) {
-                    trySend(VideoTranscodingEvent.Completed(tmpFile))
-                    close()
-                }
+        val outputTransferred = AtomicBoolean(false)
+        val videoTransformer = transformerFactory(
+            Transformer.Builder(context)
+                .setVideoMimeType(MimeTypes.VIDEO_H264)
+                .setAudioMimeType(MimeTypes.AUDIO_AAC)
+                .setPortraitEncodingEnabled(false)
+                .setEncoderFactory(encoderFactory)
+                .setMuxerFactory(removeMetadataMuxer)
+                .addListener(object : Transformer.Listener {
+                    override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                        outputTransferred.set(trySend(VideoTranscodingEvent.Completed(tmpFile)).isSuccess)
+                        close()
+                    }
 
-                override fun onError(composition: Composition, exportResult: ExportResult, exportException: ExportException) {
-                    Timber.e(exportException, "Video transcoding failed")
-                    tmpFile.safeDelete()
-                    close(exportException)
-                }
+                    override fun onError(composition: Composition, exportResult: ExportResult, exportException: ExportException) {
+                        Timber.e(exportException, "Video transcoding failed")
+                        tmpFile.safeDelete()
+                        close(exportException)
+                    }
 
-                override fun onFallbackApplied(
-                    composition: Composition,
-                    originalTransformationRequest: TransformationRequest,
-                    fallbackTransformationRequest: TransformationRequest
-                ) = Unit
-            })
-            .build()
+                    override fun onFallbackApplied(
+                        composition: Composition,
+                        originalTransformationRequest: TransformationRequest,
+                        fallbackTransformationRequest: TransformationRequest
+                    ) = Unit
+                })
+        )
 
         val progressJob = launch(Dispatchers.Main) {
             val progressHolder = ProgressHolder()
@@ -146,12 +154,19 @@ class VideoCompressor(
             }
         }
 
-        withContext(Dispatchers.Main) {
-            videoTransformer.start(outputMediaItem, tmpFile.path)
-        }
-
-        awaitClose {
-            progressJob.cancel()
+        try {
+            withContext(Dispatchers.Main) {
+                videoTransformer.start(outputMediaItem, tmpFile.path)
+            }
+            awaitClose()
+        } finally {
+            // A cancelled flow is not a cancelled Media3 export. Acknowledge only
+            // after the application-thread worker has stopped, before retry can start.
+            withContext(NonCancellable + Dispatchers.Main) {
+                progressJob.cancelAndJoin()
+                videoTransformer.cancel()
+                if (!outputTransferred.get()) tmpFile.safeDelete()
+            }
         }
     }
 

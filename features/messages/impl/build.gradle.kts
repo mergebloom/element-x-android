@@ -12,6 +12,7 @@ import extension.testCommonDependencies
 plugins {
     id("io.element.android-compose-library")
     id("kotlin-parcelize")
+    alias(libs.plugins.roborazzi)
 }
 
 android {
@@ -83,6 +84,9 @@ dependencies {
     implementation(projects.features.roommembermoderation.api)
 
     testCommonDependencies(libs, true)
+    testImplementation(libs.test.roborazzi)
+    testImplementation(libs.test.roborazzi.compose)
+    testImplementation(libs.test.roborazzi.junit)
     testImplementation(projects.libraries.matrix.test)
     testImplementation(projects.libraries.dateformatter.test)
     testImplementation(projects.libraries.push.test)
@@ -101,6 +105,7 @@ dependencies {
     testImplementation(projects.libraries.permissions.test)
     testImplementation(projects.libraries.preferences.test)
     testImplementation(projects.libraries.audio.test)
+    testImplementation(projects.libraries.audio.impl)
     testImplementation(projects.libraries.voicerecorder.test)
     testImplementation(projects.libraries.mediaplayer.test)
     testImplementation(projects.libraries.mediaviewer.test)

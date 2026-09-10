@@ -9,6 +9,7 @@
 package io.element.android.features.messages.impl
 
 import io.element.android.features.messages.impl.attachments.Attachment
+import io.element.android.features.messages.impl.messagecomposer.AttachmentCaptionDraft
 import io.element.android.libraries.matrix.api.core.EventId
 import io.element.android.libraries.matrix.api.core.RoomId
 import io.element.android.libraries.matrix.api.core.ThreadId
@@ -30,6 +31,9 @@ class FakeMessagesNavigator(
     private val closeLambda: () -> Unit = { lambdaError() },
     private val navigateToCurrentLiveLocationLambda: () -> Unit = { lambdaError() },
 ) : MessagesNavigator {
+    var lastCaptionDraft: AttachmentCaptionDraft? = null
+        private set
+
     override fun navigateToEventDebugInfo(eventId: EventId?, debugInfo: TimelineItemDebugInfo) {
         onShowEventDebugInfoClickLambda(eventId, debugInfo)
     }
@@ -46,7 +50,8 @@ class FakeMessagesNavigator(
         onEditPollClickLambda(eventId)
     }
 
-    override fun navigateToPreviewAttachments(attachments: ImmutableList<Attachment>, inReplyToEventId: EventId?) {
+    override fun navigateToPreviewAttachments(attachments: ImmutableList<Attachment>, inReplyToEventId: EventId?, captionDraft: AttachmentCaptionDraft?) {
+        lastCaptionDraft = captionDraft
         onPreviewAttachmentLambda(attachments, inReplyToEventId)
     }
 

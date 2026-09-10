@@ -59,6 +59,7 @@ import io.element.android.libraries.designsystem.components.ProgressDialog
 import io.element.android.libraries.designsystem.components.ProgressDialogType
 import io.element.android.libraries.designsystem.components.button.BackButton
 import io.element.android.libraries.designsystem.components.dialogs.AlertDialog
+import io.element.android.libraries.designsystem.components.dialogs.ConfirmationDialog
 import io.element.android.libraries.designsystem.components.dialogs.ListDialog
 import io.element.android.libraries.designsystem.components.dialogs.RetryDialog
 import io.element.android.libraries.designsystem.components.list.ListItemContent
@@ -197,6 +198,17 @@ fun AttachmentsPreviewView(
             )
         }
     }
+    if (state.showDraftConflict) {
+        ConfirmationDialog(
+            title = stringResource(R.string.screen_caption_draft_conflict_title),
+            content = stringResource(R.string.screen_caption_draft_conflict_body),
+            submitText = stringResource(R.string.screen_caption_discard_attachment),
+            cancelText = stringResource(R.string.screen_caption_keep_editing),
+            destructiveSubmit = true,
+            onSubmitClick = { state.eventSink(AttachmentsPreviewEvent.DiscardAttachmentDraft) },
+            onDismiss = { state.eventSink(AttachmentsPreviewEvent.KeepEditingDraft) },
+        )
+    }
     AttachmentSendStateView(
         sendActionState = state.sendActionState,
         isApplyingImageEdits = state.isApplyingImageEdits,
@@ -276,6 +288,13 @@ private fun AttachmentPreviewContent(
             .fillMaxSize()
             .navigationBarsPadding(),
     ) {
+        if (state.plainTextConversion) {
+            Text(
+                text = stringResource(R.string.screen_caption_plain_text),
+                modifier = Modifier.padding(16.dp),
+                style = ElementTheme.typography.fontBodySmRegular,
+            )
+        }
         Box(
             modifier = Modifier
                 .weight(1f),

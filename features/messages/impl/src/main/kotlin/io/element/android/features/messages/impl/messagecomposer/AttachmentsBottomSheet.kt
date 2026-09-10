@@ -13,6 +13,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import io.element.android.compound.tokens.generated.CompoundIcons
 import io.element.android.features.messages.impl.R
 import io.element.android.libraries.androidutils.ui.hideKeyboard
@@ -37,6 +39,7 @@ import io.element.android.libraries.designsystem.theme.components.IconSource
 import io.element.android.libraries.designsystem.theme.components.ListItem
 import io.element.android.libraries.designsystem.theme.components.ModalBottomSheet
 import io.element.android.libraries.designsystem.theme.components.Text
+import io.element.android.libraries.textcomposer.model.TextEditorState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -103,6 +106,13 @@ private fun AttachmentSourcePickerMenu(
             .imePadding()
             .verticalScroll(rememberScrollState())
     ) {
+        val draftText = when (val editor = state.textEditorState) {
+            is TextEditorState.Markdown -> editor.state.text.value().toString()
+            is TextEditorState.Rich -> editor.richTextEditorState.messageMarkdown
+        }
+        if (draftText.isNotEmpty() && !state.mode.isEditing) {
+            Text(stringResource(R.string.screen_caption_single_attachment_hint), modifier = Modifier.padding(16.dp))
+        }
         ListItem(
             modifier = Modifier.clickable { state.eventSink(MessageComposerEvent.PickAttachmentSource.PhotoFromCamera) },
             leadingContent = ListItemContent.Icon(IconSource.Vector(CompoundIcons.TakePhoto())),

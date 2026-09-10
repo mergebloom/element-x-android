@@ -10,6 +10,7 @@ package io.element.android.features.messages.impl.voicemessages.composer
 
 import android.Manifest
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -48,11 +49,13 @@ import io.element.android.libraries.voicerecorder.api.VoiceRecorder
 import io.element.android.libraries.voicerecorder.api.VoiceRecorderState
 import io.element.android.services.analytics.api.AnalyticsService
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 import timber.log.Timber
-import java.io.File
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -75,70 +78,101 @@ class DefaultVoiceMessageComposerPresenter(
     }
 
     private val permissionsPresenter = permissionsPresenterFactory.create(Manifest.permission.RECORD_AUDIO)
-    private var pendingEvent: VoiceMessageRecorderEvent.Start? = null
+    private var waitingForPermission = false
+    private var recordingReplyTo: EventId? = null
+
+    // This presenter outlives its composition. Recording and upload ownership must do the same.
+    private var starting by mutableStateOf(false)
+    private var recordingActive by mutableStateOf(false)
+    private var stopping by mutableStateOf(false)
+    private var stopRequested: Boolean? = null
+    private var isSending by mutableStateOf(false)
+    private var showSendFailureDialog by mutableStateOf(false)
+    private var microphoneReady by mutableStateOf(false)
+    private var recordingError by mutableStateOf(false)
     private val mediaSender = mediaSenderFactory.create(timelineMode)
 
     @Composable
     override fun present(): VoiceMessageComposerState {
         val localCoroutineScope = rememberCoroutineScope()
-        val recorderState by voiceRecorder.state.collectAsState(initial = VoiceRecorderState.Idle)
+        DisposableEffect(Unit) {
+            onDispose {
+                finishRecording()
+                player.pause()
+            }
+        }
+        val recorderState by voiceRecorder.state.collectAsState()
         val playerState by player.state.collectAsState(initial = VoiceMessageComposerPlayer.State.Initial)
         val keepScreenOn by remember { derivedStateOf { recorderState is VoiceRecorderState.Recording } }
         val permissionState by rememberUpdatedState(permissionsPresenter.present())
-        var isSending by remember { mutableStateOf(false) }
-        var showSendFailureDialog by remember { mutableStateOf(false) }
 
         LaunchedEffect(recorderState) {
-            val recording = recorderState as? VoiceRecorderState.Finished
-                ?: return@LaunchedEffect
-            player.setMedia(recording.file.path)
+            when (val recording = recorderState) {
+                is VoiceRecorderState.Failure -> {
+                    recordingActive = false
+                    recordingError = true
+                    audioFocus.releaseAudioFocus()
+                }
+                is VoiceRecorderState.Finished -> {
+                    recordingActive = false
+                    player.setMedia(recording.file.path)
+                }
+                else -> Unit
+            }
         }
 
         LaunchedEffect(permissionState.permissionGranted) {
-            if (permissionState.permissionGranted) {
-                pendingEvent?.let {
-                    localCoroutineScope.startRecording()
-                    pendingEvent = null
-                }
+            if (permissionState.permissionGranted && waitingForPermission) {
+                waitingForPermission = false
+                microphoneReady = true
             }
         }
 
         fun handleLifecycleEvent(event: Lifecycle.Event) {
             when (event) {
                 Lifecycle.Event.ON_PAUSE -> {
-                    sessionCoroutineScope.finishRecording()
+                    finishRecording()
                     player.pause()
                 }
                 Lifecycle.Event.ON_DESTROY -> {
-                    sessionCoroutineScope.cancelRecording()
+                    // Navigation guards handle explicit discard. Destruction must never cancel an upload or delete a preview.
+                    finishRecording()
                 }
                 else -> {}
             }
         }
 
         fun handleVoiceMessageRecorderEvent(event: VoiceMessageRecorderEvent) {
-            pendingEvent = null
             when (event) {
                 VoiceMessageRecorderEvent.Start -> {
                     Timber.v("Voice message record button pressed")
                     when {
-                        permissionState.permissionGranted -> {
-                            localCoroutineScope.startRecording()
+                        permissionState.permissionGranted && !messageComposerContext.composerMode.isEditing &&
+                            (voiceRecorder.state.value is VoiceRecorderState.Idle || voiceRecorder.state.value is VoiceRecorderState.Failure) &&
+                            !starting && !recordingActive && !stopping && !isSending -> {
+                            microphoneReady = false
+                            recordingError = false
+                            recordingReplyTo = (messageComposerContext.composerMode as? MessageComposerMode.Reply)?.eventId
+                            starting = true
+                            recordingActive = true
+                            stopRequested = null
+                            startRecording()
                         }
+                        permissionState.permissionGranted -> Unit
                         else -> {
                             Timber.i("Voice message permission needed")
-                            pendingEvent = VoiceMessageRecorderEvent.Start
+                            waitingForPermission = true
                             permissionState.eventSink(PermissionsEvent.RequestPermissions)
                         }
                     }
                 }
                 VoiceMessageRecorderEvent.Stop -> {
                     Timber.v("Voice message stop button pressed")
-                    localCoroutineScope.finishRecording()
+                    finishRecording()
                 }
                 VoiceMessageRecorderEvent.Cancel -> {
                     Timber.v("Voice message cancel button tapped")
-                    localCoroutineScope.cancelRecording()
+                    finishRecording(cancelled = true)
                 }
             }
         }
@@ -154,31 +188,33 @@ class DefaultVoiceMessageComposerPresenter(
         }
 
         fun sendVoiceMessage(inReplyToEventId: EventId?) {
-            val finishedState = recorderState as? VoiceRecorderState.Finished
-            if (finishedState == null) {
+            if (isSending || stopping) return
+            val finishedState = voiceRecorder.state.value as? VoiceRecorderState.Finished
+            if (finishedState == null || finishedState.duration <= Duration.ZERO) {
                 val exception = VoiceMessageException.FileException("No file to send")
                 analyticsService.trackError(exception)
                 Timber.e(exception)
                 return
             }
-            if (isSending) {
-                return
-            }
             isSending = true
             player.pause()
             analyticsService.captureComposerEvent()
+            showSendFailureDialog = false
             sessionCoroutineScope.launch {
-                val result = sendMessage(
-                    file = finishedState.file,
-                    mimeType = finishedState.mimeType,
-                    waveform = finishedState.waveform,
-                    inReplyToEventId = inReplyToEventId,
-                )
-                if (result.isFailure) {
+                try {
+                    val result = sendMessage(
+                        recording = finishedState,
+                        inReplyToEventId = inReplyToEventId,
+                    )
+                    if (result.isFailure) showSendFailureDialog = true
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Timber.e(e, "Voice message error")
                     showSendFailureDialog = true
+                } finally {
+                    isSending = false
                 }
-            }.invokeOnCompletion {
-                isSending = false
             }
         }
 
@@ -189,14 +225,14 @@ class DefaultVoiceMessageComposerPresenter(
                 is VoiceMessageComposerEvent.SendVoiceMessage -> {
                     // Capture reply info eagerly before any coroutine dispatch, since CloseSpecialMode
                     // may reset composerMode before the coroutine runs.
-                    val inReplyToEventId = (messageComposerContext.composerMode as? MessageComposerMode.Reply)?.eventId
-                    localCoroutineScope.launch {
-                        sendVoiceMessage(inReplyToEventId)
-                    }
+                    val inReplyToEventId = recordingReplyTo
+                    sendVoiceMessage(inReplyToEventId)
                 }
                 VoiceMessageComposerEvent.DeleteVoiceMessage -> {
-                    player.pause()
-                    localCoroutineScope.deleteRecording()
+                    if (!isSending) {
+                        player.pause()
+                        finishRecording(cancelled = true)
+                    }
                 }
                 VoiceMessageComposerEvent.DismissPermissionsRationale -> {
                     permissionState.eventSink(PermissionsEvent.CloseDialog)
@@ -226,11 +262,17 @@ class DefaultVoiceMessageComposerPresenter(
                         recorderState = recorderState,
                         isSending = isSending
                     )
-                else -> VoiceMessageState.Idle
+                else -> if (starting || recordingActive || stopping) {
+                    VoiceMessageState.Recording(Duration.ZERO, persistentListOf())
+                } else {
+                    VoiceMessageState.Idle
+                }
             },
             showPermissionRationaleDialog = permissionState.showDialog,
             showSendFailureDialog = showSendFailureDialog,
-            keepScreenOn = keepScreenOn,
+            keepScreenOn = keepScreenOn || (recorderState !is VoiceRecorderState.Finished && (starting || recordingActive)),
+            microphoneReady = microphoneReady,
+            recordingError = recordingError,
             eventSink = ::handleEvent,
         )
     }
@@ -255,45 +297,66 @@ class DefaultVoiceMessageComposerPresenter(
         )
     }
 
-    private fun CoroutineScope.startRecording() = launch {
+    private fun startRecording() = sessionCoroutineScope.launch(start = CoroutineStart.UNDISPATCHED) {
         try {
-            audioFocus.requestAudioFocus(AudioFocusRequester.RecordVoiceMessage) {
-                // something else grabbed focus (phone call, etc) - finish gracefully
-                // so the user keeps their partial recording
-                sessionCoroutineScope.finishRecording()
-            }
-            voiceRecorder.startRecord()
-        } catch (e: SecurityException) {
+            audioFocus.requestAudioFocus(AudioFocusRequester.RecordVoiceMessage) { finishRecording() }
+            // Focus can be lost synchronously while acquiring it. Do not start after that stop.
+            if (stopRequested == null) voiceRecorder.startRecord()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            recordingError = true
+            recordingActive = false
             audioFocus.releaseAudioFocus()
-            Timber.e(e, "Voice message error")
-            analyticsService.trackError(VoiceMessageException.PermissionMissing("Expected permission to record but none", e))
+            Timber.e(e, "Unable to start voice recording")
+            if (e is SecurityException) {
+                analyticsService.trackError(VoiceMessageException.PermissionMissing("Expected permission to record but none", e))
+            }
+        } finally {
+            starting = false
+            stopRequested?.let { finishRecording(cancelled = it) }
         }
     }
 
-    private fun CoroutineScope.finishRecording() = launch {
-        voiceRecorder.stopRecord()
-        audioFocus.releaseAudioFocus()
-    }
-
-    private fun CoroutineScope.cancelRecording() = launch {
-        voiceRecorder.stopRecord(cancelled = true)
-        audioFocus.releaseAudioFocus()
-    }
-
-    private fun CoroutineScope.deleteRecording() = launch {
-        voiceRecorder.deleteRecording()
+    private fun finishRecording(cancelled: Boolean = false) {
+        if (isSending) return
+        if (!starting && !recordingActive && voiceRecorder.state.value !is VoiceRecorderState.Recording &&
+            !(cancelled && voiceRecorder.state.value is VoiceRecorderState.Finished)
+        ) {
+            return
+        }
+        // Explicit cancel wins over subsequent lifecycle/focus stops, including during native startup.
+        stopRequested = stopRequested == true || cancelled
+        if (stopping) return
+        if (starting && voiceRecorder.state.value is VoiceRecorderState.Idle) return
+        stopping = true
+        sessionCoroutineScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            try {
+                if (recordingActive || voiceRecorder.state.value is VoiceRecorderState.Recording) {
+                    voiceRecorder.stopRecord(cancelled = stopRequested == true)
+                }
+                if (stopRequested == true && voiceRecorder.state.value !is VoiceRecorderState.Idle) voiceRecorder.deleteRecording()
+                recordingActive = false
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                recordingError = true
+                Timber.e(e, "Unable to finish voice recording")
+            } finally {
+                stopping = false
+                audioFocus.releaseAudioFocus()
+            }
+        }
     }
 
     private suspend fun sendMessage(
-        file: File,
-        mimeType: String,
-        waveform: List<Float>,
+        recording: VoiceRecorderState.Finished,
         inReplyToEventId: EventId? = null,
     ): Result<Unit> {
         val result = mediaSender.sendVoiceMessage(
-            uri = file.toUri(),
-            mimeType = mimeType,
-            waveForm = waveform,
+            uri = recording.file.toUri(),
+            mimeType = recording.mimeType,
+            waveForm = recording.waveform,
             inReplyToEventId = inReplyToEventId,
         )
 
@@ -302,7 +365,10 @@ class DefaultVoiceMessageComposerPresenter(
             return result
         }
 
-        voiceRecorder.deleteRecording()
+        // Never let a stale completion consume a replacement recording.
+        if (voiceRecorder.state.value === recording) {
+            voiceRecorder.deleteRecording()
+        }
 
         return result
     }
@@ -310,9 +376,9 @@ class DefaultVoiceMessageComposerPresenter(
     private fun AnalyticsService.captureComposerEvent() =
         capture(
             Composer(
-                inThread = messageComposerContext.composerMode.inThread,
-                isEditing = messageComposerContext.composerMode.isEditing,
-                isReply = messageComposerContext.composerMode.isReply,
+                inThread = timelineMode is Timeline.Mode.Thread,
+                isEditing = false,
+                isReply = recordingReplyTo != null,
                 messageType = Composer.MessageType.VoiceMessage,
             )
         )
