@@ -112,9 +112,10 @@ private fun AudioFocusRequester.toAudioStream(): Int {
 
 private fun AudioFocusRequester.pausesOnTransientFocusLoss(): Boolean {
     return when (this) {
-        // The AudioRecord API keeps capturing regardless.
-        AudioFocusRequester.RecordVoiceMessage,
         AudioFocusRequester.VoiceMessage -> false
+        // AudioRecord keeps capturing regardless: explicitly stop to review on
+        // interruptions, including transient focus loss and duck requests.
+        AudioFocusRequester.RecordVoiceMessage,
         AudioFocusRequester.ElementCall,
         AudioFocusRequester.MediaViewer -> true
     }

@@ -56,6 +56,7 @@ import io.element.android.tests.testutils.robolectric.RobolectricTest
 import io.element.android.tests.testutils.setSafeContent
 import io.element.android.wysiwyg.link.Link
 import io.mockk.every
+import io.mockk.registerInstanceFactory
 import io.mockk.mockk
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.test.TestScope
@@ -64,6 +65,12 @@ import kotlin.time.Duration.Companion.seconds
 
 /** Real MessagesView rows/dialogs and node exits; timeline/recorder state is controlled at the presenter boundary. */
 class MessagesVoiceNavigationTest : RobolectricTest() {
+    init {
+        registerInstanceFactory { io.element.android.libraries.matrix.test.AN_EVENT_ID }
+        registerInstanceFactory { io.element.android.libraries.matrix.api.core.ThreadId(io.element.android.libraries.matrix.test.AN_EVENT_ID.value) }
+        registerInstanceFactory { io.element.android.libraries.matrix.test.A_USER_ID }
+        registerInstanceFactory { io.element.android.libraries.matrix.test.A_ROOM_ID }
+    }
     @Test fun `thread summary pill guards recording preview and upload`() = checkRoute(Route.ThreadSummary)
     @Test fun `validated cross room link guards recording preview and upload`() = checkRoute(Route.RoomLink)
     @Test fun `validated member link guards recording preview and upload`() = checkRoute(Route.MemberLink)

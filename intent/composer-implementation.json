@@ -384,6 +384,28 @@
         "EC-001"
       ],
       "role": "test"
+    },
+    {
+      "path": "libraries/audio/impl/src/main/kotlin/io/element/android/libraries/audio/impl/DefaultAudioFocus.kt",
+      "requirements": [
+        "EC-005"
+      ],
+      "role": "production"
+    },
+    {
+      "path": "libraries/mediaupload/impl/src/main/kotlin/io/element/android/libraries/mediaupload/impl/VideoCompressor.kt",
+      "requirements": [
+        "EC-001"
+      ],
+      "role": "production"
+    },
+    {
+      "path": "tools/check-composer-tests.py",
+      "requirements": [
+        "EC-001",
+        "EC-005"
+      ],
+      "role": "validation"
     }
   ]
 }

@@ -6,6 +6,7 @@ allprojects {
         maxHeapSize = '1g'
         jvmArgs '-XX:ActiveProcessorCount=2'
         def nativeDir = new File(System.getenv('RUNNER_TEMP'), 'rich-editor/target/debug').absolutePath
+        systemProperty 'jna.boot.library.path', nativeDir
         systemProperty 'jna.library.path', nativeDir
         systemProperty 'java.library.path', nativeDir
     }

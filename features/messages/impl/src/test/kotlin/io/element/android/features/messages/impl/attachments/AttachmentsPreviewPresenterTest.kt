@@ -132,7 +132,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Done)
             sendFileResult.assertions().isCalledOnce()
             onDoneListener.assertions().isCalledOnce()
-            assertThat(mediaPreProcessor.cleanUpCallCount).isEqualTo(1)
+            assertThat(mediaPreProcessor.cleanUpCallCount).isEqualTo(0)
         }
     }
 
@@ -169,7 +169,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Done)
             sendFileResult.assertions().isCalledOnce()
             onDoneListener.assertions().isCalledOnce()
-            assertThat(mediaPreProcessor.cleanUpCallCount).isEqualTo(1)
+            assertThat(mediaPreProcessor.cleanUpCallCount).isEqualTo(0)
         }
     }
 
@@ -206,7 +206,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Done)
             sendFileResult.assertions().isCalledOnce()
             onDoneListener.assertions().isCalledOnce()
-            assertThat(mediaPreProcessor.cleanUpCallCount).isEqualTo(1)
+            assertThat(mediaPreProcessor.cleanUpCallCount).isEqualTo(0)
         }
     }
 
@@ -228,6 +228,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             assertThat(initialState.sendActionState).isEqualTo(SendActionState.Idle)
             initialState.eventSink(AttachmentsPreviewEvent.SendAttachment)
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Processing(displayProgress = false))
+            assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Processing(displayProgress = true))
             // Pre-processing finishes
             processLatch.complete(Unit)
             assertThat(awaitItem().sendActionState).isInstanceOf(SendActionState.Failure::class.java)
@@ -277,7 +278,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Done)
             deleteCallback.assertions().isCalledOnce()
             onDoneListener.assertions().isCalledOnce()
-            assertThat(mediaPreProcessor.cleanUpCallCount).isEqualTo(1)
+            assertThat(mediaPreProcessor.cleanUpCallCount).isEqualTo(0)
         }
     }
 
@@ -308,6 +309,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             initialState.textEditorState.setMarkdown(A_CAPTION)
             initialState.eventSink(AttachmentsPreviewEvent.SendAttachment)
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Processing(displayProgress = false))
+            assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Processing(displayProgress = true))
             assertThat(awaitItem().sendActionState).isInstanceOf(SendActionState.Sending.ReadyToUpload::class.java)
             assertThat(awaitItem().sendActionState).isInstanceOf(SendActionState.Sending.Uploading::class.java)
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Done)
@@ -350,6 +352,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             initialState.textEditorState.setMarkdown(A_CAPTION)
             initialState.eventSink(AttachmentsPreviewEvent.SendAttachment)
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Processing(displayProgress = false))
+            assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Processing(displayProgress = true))
             assertThat(awaitItem().sendActionState).isInstanceOf(SendActionState.Sending.ReadyToUpload::class.java)
             assertThat(awaitItem().sendActionState).isInstanceOf(SendActionState.Sending.Uploading::class.java)
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Done)
@@ -392,6 +395,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             initialState.textEditorState.setMarkdown(A_CAPTION)
             initialState.eventSink(AttachmentsPreviewEvent.SendAttachment)
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Processing(displayProgress = false))
+            assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Processing(displayProgress = true))
             assertThat(awaitItem().sendActionState).isInstanceOf(SendActionState.Sending.ReadyToUpload::class.java)
             assertThat(awaitItem().sendActionState).isInstanceOf(SendActionState.Sending.Uploading::class.java)
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Done)
@@ -426,6 +430,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             assertThat(initialState.sendActionState).isEqualTo(SendActionState.Idle)
             initialState.eventSink(AttachmentsPreviewEvent.SendAttachment)
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Processing(displayProgress = false))
+            assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Processing(displayProgress = true))
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.ReadyToUpload(listOf(mediaUploadInfo)))
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Uploading(listOf(mediaUploadInfo)))
             val failureState = awaitItem()
@@ -456,6 +461,7 @@ class AttachmentsPreviewPresenterTest : RobolectricTest() {
             assertThat(initialState.sendActionState).isEqualTo(SendActionState.Idle)
             initialState.eventSink(AttachmentsPreviewEvent.SendAttachment)
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Processing(displayProgress = false))
+            assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Processing(displayProgress = true))
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.ReadyToUpload(listOf(mediaUploadInfo)))
             assertThat(awaitItem().sendActionState).isEqualTo(SendActionState.Sending.Uploading(listOf(mediaUploadInfo)))
             initialState.eventSink(AttachmentsPreviewEvent.CancelAndClearSendState)

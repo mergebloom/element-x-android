@@ -54,6 +54,7 @@ import io.element.android.tests.testutils.WarmUpRule
 import io.element.android.tests.testutils.test
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.registerInstanceFactory
 import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
@@ -68,6 +69,12 @@ import java.io.File
 import kotlin.time.Duration.Companion.seconds
 
 class RetainedVoiceMessageComposerPresenterTest : RobolectricTest() {
+    init {
+        registerInstanceFactory { io.element.android.libraries.matrix.test.AN_EVENT_ID }
+        registerInstanceFactory { io.element.android.libraries.matrix.api.core.ThreadId(io.element.android.libraries.matrix.test.AN_EVENT_ID.value) }
+        registerInstanceFactory { io.element.android.libraries.matrix.test.A_USER_ID }
+        registerInstanceFactory { io.element.android.libraries.matrix.test.A_ROOM_ID }
+    }
     @get:Rule val warmUpRule = WarmUpRule()
     @get:Rule val temporaryFolder = TemporaryFolder()
 

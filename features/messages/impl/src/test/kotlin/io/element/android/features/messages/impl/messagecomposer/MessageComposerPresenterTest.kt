@@ -1095,7 +1095,7 @@ class MessageComposerPresenterTest : RobolectricTest() {
     }
 
     @Test
-    fun `present - Pick media from gallery while replying clears the reply mode`() = runTest {
+    fun `present - picker preserves reply until captioned attachment succeeds`() = runTest {
         val onPreviewAttachmentLambda = lambdaRecorder { _: ImmutableList<Attachment>, _: EventId? -> }
         val navigator = FakeMessagesNavigator(
             onPreviewAttachmentLambda = onPreviewAttachmentLambda
@@ -1107,11 +1107,11 @@ class MessageComposerPresenterTest : RobolectricTest() {
             state.eventSink(MessageComposerEvent.SetMode(aReplyMode()))
             state = awaitItem()
             assertThat(state.mode).isInstanceOf(MessageComposerMode.Reply::class.java)
-            // The media becomes the reply, so the reply intent is consumed and the composer resets.
+            // The picker captures the reply, but cancel/failure must preserve the ordinary draft.
             state.eventSink(MessageComposerEvent.PickAttachmentSource.FromGallery)
             onPreviewAttachmentLambda.assertions().isCalledOnce()
-            state = awaitItem()
-            assertThat(state.mode).isEqualTo(MessageComposerMode.Normal)
+            assertThat(state.mode).isInstanceOf(MessageComposerMode.Reply::class.java)
+            expectNoEvents()
         }
     }
 

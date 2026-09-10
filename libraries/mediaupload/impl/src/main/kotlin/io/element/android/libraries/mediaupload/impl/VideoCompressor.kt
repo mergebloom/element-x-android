@@ -36,6 +36,8 @@ import io.element.android.libraries.core.extensions.runCatchingExceptions
 import io.element.android.libraries.di.annotations.ApplicationContext
 import io.element.android.libraries.preferences.api.store.VideoCompressionPreset
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -45,6 +47,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
 
 @Inject
 class VideoCompressor(
@@ -109,6 +112,7 @@ class VideoCompressor(
             )
             .build()
 
+        val outputTransferred = AtomicBoolean(false)
         val videoTransformer = Transformer.Builder(context)
             .setVideoMimeType(MimeTypes.VIDEO_H264)
             .setAudioMimeType(MimeTypes.AUDIO_AAC)
@@ -117,7 +121,7 @@ class VideoCompressor(
             .setMuxerFactory(removeMetadataMuxer)
             .addListener(object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, exportResult: ExportResult) {
-                    trySend(VideoTranscodingEvent.Completed(tmpFile))
+                    outputTransferred.set(trySend(VideoTranscodingEvent.Completed(tmpFile)).isSuccess)
                     close()
                 }
 
@@ -146,12 +150,19 @@ class VideoCompressor(
             }
         }
 
-        withContext(Dispatchers.Main) {
-            videoTransformer.start(outputMediaItem, tmpFile.path)
-        }
-
-        awaitClose {
-            progressJob.cancel()
+        try {
+            withContext(Dispatchers.Main) {
+                videoTransformer.start(outputMediaItem, tmpFile.path)
+            }
+            awaitClose()
+        } finally {
+            // A cancelled flow is not a cancelled Media3 export. Acknowledge only
+            // after the application-thread worker has stopped, before retry can start.
+            withContext(NonCancellable + Dispatchers.Main) {
+                progressJob.cancelAndJoin()
+                videoTransformer.cancel()
+                if (!outputTransferred.get()) tmpFile.safeDelete()
+            }
         }
     }
 

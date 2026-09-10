@@ -166,9 +166,8 @@ class CaptionComposerRemountTest : RobolectricTest() {
             }
             current
         }.test {
-            awaitItem()
+            var source = requireNotNull(awaitItem())
             advanceUntilIdle()
-            var source = requireNotNull(expectMostRecentItem())
             source.eventSink(MessageComposerEvent.SetMode(aReplyMode()))
             advanceUntilIdle()
             source = requireNotNull(expectMostRecentItem())
