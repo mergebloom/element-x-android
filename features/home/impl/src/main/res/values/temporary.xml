@@ -19,19 +19,20 @@
     <string name="screen_threads_unread">Unread</string>
     <string name="screen_threads_recent">Recent</string>
     <string name="screen_threads_on_device">On this device</string>
-    <string name="screen_threads_recent_description">Last opened is your viewing history here, not a synced read receipt.</string>
+    <string name="screen_threads_recent_description">Your recent threads for this account, saved only on this device.</string>
     <string name="screen_threads_clear">Clear recent history</string>
     <string name="screen_threads_clear_description">Remove this account’s recent threads from this device? Messages and read receipts are not changed.</string>
     <string name="screen_threads_recent_empty">Threads you open or message will appear here.</string>
     <string name="screen_threads_last_messaged">Last messaged</string>
     <string name="screen_threads_last_opened">Last opened</string>
-    <string name="screen_threads_loading">Finding threads and checking read receipts…</string>
+    <string name="screen_threads_loading">Finding threads…</string>
     <string name="screen_threads_partial">Some threads are not fully checked yet.</string>
     <string name="screen_threads_checked">Threads checked at the last refresh</string>
     <string name="screen_threads_stale">Offline or waiting for sync. Showing previously loaded threads; read states may have changed.</string>
     <string name="screen_threads_error">Threads could not be loaded. Check your connection and try again.</string>
     <string name="screen_threads_progress">%1$d of %2$d rooms checked</string>
-    <string name="screen_threads_refresh">Refresh / retry</string>
+    <string name="screen_threads_refresh">Refresh</string>
+    <string name="screen_threads_retry">Retry</string>
     <string name="screen_threads_empty">No unread threads</string>
     <string name="screen_threads_unknown">Read status unknown</string>
     <string name="screen_threads_preview_unavailable">Thread preview unavailable</string>
@@ -40,7 +41,7 @@
     <string name="screen_threads_unavailable_description">This thread is unavailable or could not be loaded.</string>
     <string name="screen_threads_open_room">Open room</string>
     <string name="screen_threads_close">Close</string>
-    <string name="screen_threads_more">Check further back (uses more memory)</string>
+    <string name="screen_threads_more">Check older replies</string>
     <string name="screen_threads_read">Read at last check</string>
     <string name="screen_threads_clear_failed">Could not finish clearing history. Try again.</string>
 </resources>

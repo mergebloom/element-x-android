@@ -16,6 +16,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -84,6 +88,8 @@ class ThreadsViewTest : RobolectricTest() {
         setContent { ElementTheme { ThreadsRoute(client.value, {}, { rooms += it }) } }
         onNodeWithText("Root preview").performClick()
         onNodeWithText("Thread unavailable").assertIsDisplayed()
+        val output = File("build/outputs/threads-screenshots").apply { mkdirs() }
+        onNode(isDialog()).captureRoboImage(File(output, "threads-unavailable-dialog.png").path)
         onNodeWithText("Open room").assertDoesNotExist()
         runOnIdle { client.value = FakeMatrixClient(sessionId = UserId("@bob:example.org")) }
         onNodeWithText("Thread unavailable").assertDoesNotExist()
@@ -98,8 +104,42 @@ class ThreadsViewTest : RobolectricTest() {
             }
         }
         onNodeWithText("No unread threads").assertDoesNotExist()
-        onNodeWithText("Check further back (uses more memory)").performClick()
+        onNodeWithText("Check older replies").performClick()
         assertEquals(1, requests)
+    }
+
+    @Test fun `routine refresh and failure retry have distinct plain labels`() = runAndroidComposeUiTest<ComponentActivity> {
+        val state = mutableStateOf(ThreadsState(ThreadDirectorySnapshot(coverage = ThreadCoverage.Partial)))
+        setContent { ElementTheme { ThreadsView(state.value, {}, {}, {}, {}) } }
+        onNodeWithText("Refresh").assertIsDisplayed()
+        onNodeWithText("Check older replies").assertIsDisplayed()
+        onNodeWithText("Retry").assertDoesNotExist()
+        for (coverage in listOf(ThreadCoverage.Stale, ThreadCoverage.Error)) {
+            runOnIdle { state.value = ThreadsState(ThreadDirectorySnapshot(coverage = coverage)) }
+            onNodeWithText("Retry").assertIsDisplayed()
+            onNodeWithText("Refresh").assertDoesNotExist()
+        }
+    }
+
+    @Test fun `clear recent requires confirmation and does not navigate`() = runAndroidComposeUiTest<ComponentActivity> {
+        val directory = FakeThreadDirectory().apply { state.value = ThreadDirectorySnapshot(listOf(row), ThreadCoverage.Complete) }
+        val recent = FakeRecentThreads().apply { entries.value = listOf(RecentThread(key, openedSequence = 1)) }
+        val client = FakeMatrixClient(sessionId = key.accountId, threadDirectory = directory, recentThreads = recent)
+        val opened = mutableListOf<ThreadKey>()
+        setContent { ElementTheme { ThreadsRoute(client, { opened += it }, {}) } }
+        onNodeWithText("Recent").performClick()
+        onNodeWithText("Clear recent history").performClick()
+        val output = File("build/outputs/threads-screenshots").apply { mkdirs() }
+        onNode(isDialog()).captureRoboImage(File(output, "threads-clear-dialog.png").path)
+        assertEquals(1, recent.entries.value.size)
+        onNodeWithText("Close").performClick()
+        assertEquals(1, recent.entries.value.size)
+        onNodeWithText("Clear recent history").performClick()
+        onNode(hasText("Clear recent history") and hasClickAction() and hasAnyAncestor(isDialog())).performClick()
+        waitForIdle()
+        assertEquals(emptyList<RecentThread>(), recent.entries.value)
+        assertEquals(emptyList<ThreadKey>(), opened)
+        onNodeWithText("Threads you open or message will appear here.").assertIsDisplayed()
     }
 
     @Test fun `recent keeps both different shortcuts visible`() = runAndroidComposeUiTest<ComponentActivity> {

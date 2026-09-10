@@ -105,7 +105,13 @@ fun ThreadsView(
                         Text(stringResource(coverageText))
                         Text(stringResource(R.string.screen_threads_progress, state.directory.roomsChecked, state.directory.roomsTotal))
                         if (state.directory.coverage == ThreadCoverage.Loading) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 8.dp))
-                        TextButton(onClick = onRefresh) { Text(stringResource(R.string.screen_threads_refresh)) }
+                        TextButton(onClick = onRefresh) {
+                            val action = when (state.directory.coverage) {
+                                ThreadCoverage.Error, ThreadCoverage.Stale -> R.string.screen_threads_retry
+                                else -> R.string.screen_threads_refresh
+                            }
+                            Text(stringResource(action))
+                        }
                         if (state.directory.coverage == ThreadCoverage.Partial) {
                             TextButton(onClick = onLoadMore) { Text(stringResource(R.string.screen_threads_more)) }
                         }
