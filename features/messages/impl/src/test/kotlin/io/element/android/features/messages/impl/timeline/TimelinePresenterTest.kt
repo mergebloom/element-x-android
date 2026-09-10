@@ -127,8 +127,8 @@ class TimelinePresenterTest {
             mode = mode,
             timelineItems = flowOf(
                 listOf(
-                    MatrixTimelineItem.Event(A_UNIQUE_ID, anEventTimelineItem()),
-                    MatrixTimelineItem.Event(A_UNIQUE_ID_2, anEventTimelineItem(eventId = AN_EVENT_ID_2)),
+                    MatrixTimelineItem.Event(A_UNIQUE_ID, anEventTimelineItem(content = aMessageContent())),
+                    MatrixTimelineItem.Event(A_UNIQUE_ID_2, anEventTimelineItem(eventId = AN_EVENT_ID_2, content = aMessageContent())),
                 )
             ),
             markAsReadResult = {
@@ -188,6 +188,7 @@ class TimelinePresenterTest {
             assertThat(initialState.newEventState).isEqualTo(NewEventState.None)
             assertThat(initialState.focusedEventId).isNull()
             assertThat(initialState.focusRequestState).isEqualTo(FocusRequestState.None)
+            assertThat(initialState.displayThreadSummaries).isTrue()
         }
     }
 

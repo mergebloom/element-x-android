@@ -157,7 +157,9 @@ class TimelinePresenter(
             timelineController.isLive()
         }.collectAsState(initial = true)
 
-        val displayThreadSummaries by produceState(false) {
+        // Threads is a shipped capability. Do not briefly hide thread summaries while
+        // resolving the setting, or emit a disabled placeholder before the real timeline.
+        val displayThreadSummaries by produceState(true) {
             value = featureFlagService.isFeatureEnabled(FeatureFlags.Threads)
         }
         val displayJumpToUnread by produceState(false) {

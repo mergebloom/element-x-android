@@ -44,11 +44,12 @@ jobs:
           python3 -B -m unittest discover -s intent -p 'test_*.py' -v
       - name: Run production module regressions and actual Compose captures
         run: >-
-          ./gradlew :libraries:matrix:impl:testDebugUnitTest
+          ./gradlew :features:messages:impl:testDebugUnitTest
+          :libraries:matrix:impl:testDebugUnitTest
           :features:home:impl:testDebugUnitTest
-          :features:messages:impl:testDebugUnitTest
           :libraries:textcomposer:impl:testDebugUnitTest
           :appnav:testDebugUnitTest
+          --continue
           -Proborazzi.test.record=true -Proborazzi.test.verify=false
           -Dorg.gradle.jvmargs='-Xmx3g -XX:ActiveProcessorCount=2'
           -Pkotlin.daemon.jvmargs='-Xmx2g -XX:ActiveProcessorCount=2'
