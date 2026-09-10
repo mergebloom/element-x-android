@@ -370,6 +370,20 @@
         "EC-005"
       ],
       "role": "validation"
+    },
+    {
+      "path": "libraries/audio/impl/src/test/kotlin/io/element/android/libraries/audio/impl/DefaultAudioFocusTest.kt",
+      "requirements": [
+        "EC-005"
+      ],
+      "role": "test"
+    },
+    {
+      "path": "libraries/mediaupload/impl/src/test/kotlin/io/element/android/libraries/mediaupload/impl/VideoCompressorCancellationTest.kt",
+      "requirements": [
+        "EC-001"
+      ],
+      "role": "test"
     }
   ]
 }

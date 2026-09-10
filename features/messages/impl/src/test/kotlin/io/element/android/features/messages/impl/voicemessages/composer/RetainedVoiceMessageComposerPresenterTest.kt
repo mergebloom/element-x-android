@@ -10,6 +10,13 @@
 package io.element.android.features.messages.impl.voicemessages.composer
 
 import android.Manifest
+import android.media.AudioManager
+import androidx.core.content.getSystemService
+import io.element.android.libraries.audio.api.AudioFocus
+import io.element.android.libraries.audio.impl.DefaultAudioFocus
+import io.element.android.tests.testutils.robolectric.RobolectricTest
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import androidx.lifecycle.Lifecycle
 import app.cash.turbine.TurbineTestContext
 import com.google.common.truth.Truth.assertThat
@@ -60,7 +67,7 @@ import org.junit.rules.TemporaryFolder
 import java.io.File
 import kotlin.time.Duration.Companion.seconds
 
-class RetainedVoiceMessageComposerPresenterTest {
+class RetainedVoiceMessageComposerPresenterTest : RobolectricTest() {
     @get:Rule val warmUpRule = WarmUpRule()
     @get:Rule val temporaryFolder = TemporaryFolder()
 
@@ -197,6 +204,29 @@ class RetainedVoiceMessageComposerPresenterTest {
             assertThat(recorder.file.exists()).isTrue()
             coVerify(exactly = 0) { sender.sendVoiceMessage(any(), any(), any(), any()) }
             cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `production focus listener stops pending and populated recordings without lifecycle pause`() = runTest {
+        val androidContext = RuntimeEnvironment.getApplication()
+        val manager = requireNotNull(androidContext.getSystemService<AudioManager>())
+        for (pending in listOf(false, true)) {
+            for (loss in listOf(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK)) {
+                val recorder = recorder().apply { if (pending) startGate = CompletableDeferred() }
+                presenter(recorder, audioFocus = DefaultAudioFocus(androidContext)).test {
+                    awaitItem().record(VoiceMessageRecorderEvent.Start)
+                    awaitState { it.voiceMessageState is VoiceMessageState.Recording }
+                    if (!pending) recorder.firstBuffer()
+                    requireNotNull(shadowOf(manager).lastAudioFocusRequest).listener.onAudioFocusChange(loss)
+                    recorder.startGate?.complete(Unit)
+                    awaitState { it.voiceMessageState is VoiceMessageState.Preview }
+                    assertThat(recorder.stops).containsExactly(false)
+                    assertThat(recorder.file.exists()).isTrue()
+                    coVerify(exactly = 0) { sender.sendVoiceMessage(any(), any(), any(), any()) }
+                    cancelAndIgnoreRemainingEvents()
+                }
+            }
         }
     }
 
@@ -388,15 +418,16 @@ class RetainedVoiceMessageComposerPresenterTest {
         permissions: FakePermissionsPresenter = FakePermissionsPresenter(
             aPermissionsState(permission = Manifest.permission.RECORD_AUDIO, permissionGranted = true, showDialog = false)
         ),
+        audioFocus: AudioFocus = FakeAudioFocus(
+            requestAudioFocusResult = { _, lost -> onFocusLost = lost },
+            releaseAudioFocusResult = { focusReleases++ },
+        ),
     ) = DefaultVoiceMessageComposerPresenter(
         sessionCoroutineScope = backgroundScope,
         timelineMode = timelineMode,
         voiceRecorder = recorder,
         analyticsService = FakeAnalyticsService(),
-        audioFocus = FakeAudioFocus(
-            requestAudioFocusResult = { _, lost -> onFocusLost = lost },
-            releaseAudioFocusResult = { focusReleases++ },
-        ),
+        audioFocus = audioFocus,
         mediaSenderFactory = { mode ->
             assertThat(mode).isEqualTo(timelineMode)
             mediaSender

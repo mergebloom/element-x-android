@@ -46,7 +46,7 @@ jobs:
       - name: Run all changed module tests and genuine native Compose captures
         run: |
           git rev-parse HEAD > validation-evidence/source-sha.txt
-          ./gradlew :libraries:mediaupload:impl:testDebugUnitTest :libraries:voicerecorder:impl:testDebugUnitTest :libraries:textcomposer:impl:testDebugUnitTest :features:messages:impl:testDebugUnitTest --continue --stacktrace --no-configuration-cache --no-parallel --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process -Dorg.gradle.jvmargs='-Xmx3g -XX:MaxMetaspaceSize=1g -XX:ActiveProcessorCount=2' -I tools/composer-validation.init.gradle -Proborazzi.test.record=true -Proborazzi.test.verify=false 2>&1 | tee validation-evidence/gradle.log
+          ./gradlew :libraries:audio:impl:testDebugUnitTest :libraries:mediaupload:impl:testDebugUnitTest :libraries:voicerecorder:impl:testDebugUnitTest :libraries:textcomposer:impl:testDebugUnitTest :features:messages:impl:testDebugUnitTest --continue --stacktrace --no-configuration-cache --no-parallel --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process -Dorg.gradle.jvmargs='-Xmx3g -XX:MaxMetaspaceSize=1g -XX:ActiveProcessorCount=2' -I tools/composer-validation.init.gradle -Proborazzi.test.record=true -Proborazzi.test.verify=false 2>&1 | tee validation-evidence/gradle.log
       - name: Check changed module Kotlin style
         if: success() || failure()
         run: ./gradlew :libraries:textcomposer:impl:ktlintCheck :features:messages:impl:ktlintCheck :libraries:mediaupload:impl:ktlintCheck :libraries:voicerecorder:impl:ktlintCheck --no-configuration-cache --no-parallel --max-workers=2 -Dorg.gradle.jvmargs='-Xmx2g -XX:ActiveProcessorCount=2'
@@ -57,6 +57,7 @@ jobs:
           name: safe-composer-${{ github.sha }}
           path: |
             validation-evidence/
+            libraries/audio/impl/build/test-results/
             libraries/mediaupload/impl/build/test-results/
             libraries/voicerecorder/impl/build/test-results/
             libraries/textcomposer/impl/build/test-results/
