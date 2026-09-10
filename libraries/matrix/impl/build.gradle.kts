@@ -49,6 +49,10 @@ dependencies {
     implementation(libs.serialization.json)
     implementation(libs.kotlinx.collections.immutable)
 
+    androidTestImplementation(libs.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.test.junit)
+
     testCommonDependencies(libs)
     testImplementation(projects.features.enterprise.test)
     testImplementation(projects.libraries.featureflag.test)

@@ -1,0 +1,125 @@
+name: Threads native Android proof
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Exact 40-character reviewed commit (empty uses dispatch commit)
+        type: string
+        required: false
+  push:
+    branches: [feature/threads-directory]
+    paths:
+      - 'libraries/matrix/**'
+      - 'scripts/threads-native/**'
+      - '.github/workflows/threads-native.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: threads-native-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  EXPECTED_SHA: ${{ inputs.source_sha || github.sha }}
+  JAVA_TOOL_OPTIONS: -XX:ActiveProcessorCount=2
+
+jobs:
+  build:
+    name: Exact-SHA library instrumentation APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+          persist-credentials: false
+          submodules: false
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+      - name: Validate exact source and evidence parser
+        run: |
+          python3 -B -m unittest discover -s scripts/threads-native -p 'test_*.py' -v
+          python3 -c 'import sys; sys.path.insert(0, "scripts/threads-native"); from evidence import source_sha; import os; source_sha(os.environ["EXPECTED_SHA"])'
+      - name: Assemble only the Matrix library instrumentation APK
+        run: >-
+          ./gradlew :libraries:matrix:impl:assembleDebugAndroidTest
+          --no-daemon --no-configuration-cache --no-parallel --max-workers=2
+          -Dorg.gradle.jvmargs='-Xmx3g -XX:ActiveProcessorCount=2'
+          -Pkotlin.daemon.jvmargs='-Xmx2g -XX:ActiveProcessorCount=2'
+      - name: Bind self-instrumenting APK to exact source and pinned AAR
+        run: python3 -B scripts/threads-native/evidence.py package --sha "$EXPECTED_SHA"
+      - name: Handoff only the test APK and source identity
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: threads-native-apk-${{ env.EXPECTED_SHA }}
+          path: |
+            native-handoff/threads-native-test.apk
+            native-handoff/build.json
+          if-no-files-found: error
+          retention-days: 7
+
+  emulator:
+    name: Pinned native AAR + disposable Synapse on KVM
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+          persist-credentials: false
+          submodules: false
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: threads-native-apk-${{ env.EXPECTED_SHA }}
+          path: native-handoff
+      - name: Install isolated, version-pinned synthetic homeserver
+        run: |
+          python3 -m venv "$RUNNER_TEMP/threads-synapse-venv"
+          "$RUNNER_TEMP/threads-synapse-venv/bin/pip" install --no-cache-dir 'matrix-synapse==1.160.0'
+      - name: Enable job-owned emulator KVM access
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          test -r /dev/kvm && test -w /dev/kvm
+      - name: Run the real native instrumentation cases (no Gradle here)
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7_pro
+          disk-size: 3G
+          disable-animations: true
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash scripts/threads-native/run-emulator.sh
+      - name: Require exact nonzero plan and native network/audit evidence
+        if: always()
+        run: python3 -B scripts/threads-native/evidence.py verify --sha "$EXPECTED_SHA"
+      - name: Upload only sanitized allowlisted evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: threads-native-evidence-${{ env.EXPECTED_SHA }}
+          path: |
+            native-evidence/build.json
+            native-evidence/device.json
+            native-evidence/server.json
+            native-evidence/audit.json
+            native-evidence/results.json
+            native-evidence/junit.xml
+          if-no-files-found: error
+          retention-days: 7
+      - name: Remove only this job's reproducible Synapse environment
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/threads-synapse-venv"
