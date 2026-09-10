@@ -12,6 +12,7 @@ import extension.testCommonDependencies
 plugins {
     id("io.element.android-compose-library")
     id("kotlin-parcelize")
+    alias(libs.plugins.roborazzi)
 }
 
 android {
@@ -64,6 +65,9 @@ dependencies {
     api(projects.features.home.api)
 
     testCommonDependencies(libs, true)
+    testImplementation(libs.test.roborazzi)
+    testImplementation(libs.test.roborazzi.compose)
+    testImplementation(libs.test.roborazzi.junit)
     testImplementation(projects.features.announcement.test)
     testImplementation(projects.features.invite.test)
     testImplementation(projects.features.logout.test)

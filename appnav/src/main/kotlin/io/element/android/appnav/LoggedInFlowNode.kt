@@ -102,6 +102,7 @@ import io.element.android.services.analytics.api.AnalyticsService
 import io.element.android.services.analytics.api.watchers.AnalyticsRoomListStateWatcher
 import io.element.android.services.appnavstate.api.AppNavigationStateService
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -335,6 +336,18 @@ class LoggedInFlowNode(
             }
             NavTarget.Home -> {
                 val callback = object : HomeEntryPoint.Callback {
+                    override suspend fun navigateToThread(key: io.element.android.libraries.matrix.api.threads.ThreadKey) {
+                        // This node outlives Home composition when attaching the room, then its thread.
+                        lifecycleScope.async {
+                            check(key.accountId == matrixClient.sessionId)
+                            attachRoom(
+                                roomIdOrAlias = key.roomId.toRoomIdOrAlias(),
+                                initialElement = RoomNavigationTarget.Root(eventId = key.rootEventId),
+                                clearBackstack = false,
+                            ).attachThread(io.element.android.libraries.matrix.api.core.ThreadId(key.rootEventId.value), null)
+                        }.await()
+                    }
+
                     override fun navigateToRoom(roomId: RoomId, eventId: EventId?, joinedRoom: JoinedRoom?) {
                         lifecycleScope.launch {
                             attachRoom(

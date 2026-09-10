@@ -66,9 +66,6 @@ import io.element.android.libraries.androidutils.throttler.FirstThrottler
 import io.element.android.libraries.designsystem.preview.ElementPreview
 import io.element.android.libraries.designsystem.preview.PreviewsDayNight
 import io.element.android.libraries.designsystem.theme.components.FloatingActionButton
-import io.element.android.libraries.designsystem.theme.components.HorizontalFloatingToolbar
-import io.element.android.libraries.designsystem.theme.components.HorizontalFloatingToolbarItem
-import io.element.android.libraries.designsystem.theme.components.HorizontalFloatingToolbarSeparator
 import io.element.android.libraries.designsystem.theme.components.Icon
 import io.element.android.libraries.designsystem.theme.components.Scaffold
 import io.element.android.libraries.designsystem.utils.lazyColumnContentPadding
@@ -96,6 +93,7 @@ fun HomeView(
     acceptDeclineInviteView: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     leaveRoomView: @Composable () -> Unit,
+    threadsContent: @Composable (Modifier, PaddingValues) -> Unit = { _, _ -> },
 ) {
     val state: RoomListState = homeState.roomListState
     val coroutineScope = rememberCoroutineScope()
@@ -130,6 +128,7 @@ fun HomeView(
             onStartChatClick = { if (firstThrottler.canHandle()) onStartChatClick() },
             onCreateSpaceClick = { if (firstThrottler.canHandle()) onCreateSpaceClick() },
             onMenuActionClick = onMenuActionClick,
+            threadsContent = threadsContent,
         )
 
         if (state.globalSearchState.isEnabled) {
@@ -168,6 +167,7 @@ private fun HomeScaffold(
     onStartChatClick: () -> Unit,
     onCreateSpaceClick: () -> Unit,
     onMenuActionClick: (RoomListMenuAction) -> Unit,
+    threadsContent: @Composable (Modifier, PaddingValues) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     fun onRoomClick(room: RoomListRoomSummary) {
@@ -193,6 +193,7 @@ private fun HomeScaffold(
     val hazeState = rememberHazeState()
     val roomsLazyListState = rememberLazyListState()
     val spacesLazyListState = rememberLazyListState()
+    val threadStateHolder = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -242,8 +243,10 @@ private fun HomeScaffold(
                         val lazyListStateTarget = when (item) {
                             HomeNavigationBarItem.Chats -> roomsLazyListState
                             HomeNavigationBarItem.Spaces -> spacesLazyListState
+                            HomeNavigationBarItem.Threads -> null
                         }
                         coroutineScope.launch {
+                            if (lazyListStateTarget == null) return@launch
                             if (lazyListStateTarget.firstVisibleItemIndex > 10) {
                                 lazyListStateTarget.scrollToItem(10)
                             }
@@ -263,6 +266,7 @@ private fun HomeScaffold(
                         HomeNavigationBarItem.Spaces -> {
                             HomeFloatingActionButton(onCreateSpaceClick, CommonStrings.action_create_space)
                         }
+                        HomeNavigationBarItem.Threads -> Unit
                     }
                 },
             )
@@ -278,9 +282,14 @@ private fun HomeScaffold(
                 top = padding.calculateTopPadding()
             )
             val contentPadding = PaddingValues(
-                bottom = 96.dp,
+                bottom = if (state.currentHomeNavigationBarItem == HomeNavigationBarItem.Threads) 120.dp else 192.dp,
             )
             when (state.currentHomeNavigationBarItem) {
+                HomeNavigationBarItem.Threads -> {
+                    threadStateHolder.SaveableStateProvider("threads") {
+                        threadsContent(Modifier.fillMaxSize().padding(outerPadding).consumeWindowInsets(outerPadding), contentPadding)
+                    }
+                }
                 HomeNavigationBarItem.Chats -> {
                     RoomListContentView(
                         contentState = roomListState.contentState,
@@ -347,22 +356,21 @@ private fun HomeBottomBar(
     modifier: Modifier = Modifier,
     floatingActionButton: (@Composable () -> Unit)?,
 ) {
-    HorizontalFloatingToolbar(
-        floatingActionButton = floatingActionButton,
-        modifier = modifier
-            .zIndex(1f),
-    ) {
-        HomeNavigationBarItem.entries.forEachIndexed { index, item ->
-            if (index > 0) {
-                HorizontalFloatingToolbarSeparator()
+    androidx.compose.foundation.layout.Column(modifier.zIndex(1f)) {
+        if (currentHomeNavigationBarItem != HomeNavigationBarItem.Threads) {
+            Box(Modifier.padding(8.dp), contentAlignment = androidx.compose.ui.Alignment.CenterEnd) { floatingActionButton?.invoke() }
+        }
+        androidx.compose.material3.NavigationBar {
+            HomeNavigationBarItem.entries.forEach { item ->
+                val selected = currentHomeNavigationBarItem == item
+                androidx.compose.material3.NavigationBarItem(
+                    selected = selected,
+                    onClick = { onItemClick(item) },
+                    icon = { Icon(item.icon(selected), contentDescription = null) },
+                    label = { androidx.compose.material3.Text(stringResource(item.labelRes)) },
+                    alwaysShowLabel = true,
+                )
             }
-            val isSelected = currentHomeNavigationBarItem == item
-            HorizontalFloatingToolbarItem(
-                icon = item.icon(isSelected),
-                tooltipLabel = stringResource(item.labelRes),
-                isSelected = isSelected,
-                onClick = { onItemClick(item) },
-            )
         }
     }
 }

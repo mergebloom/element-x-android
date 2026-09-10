@@ -45,6 +45,7 @@ class DefaultHomeEntryPointTest : RobolectricTest() {
             )
         }
         val callback = object : HomeEntryPoint.Callback {
+            override suspend fun navigateToThread(key: io.element.android.libraries.matrix.api.threads.ThreadKey) = lambdaError()
             override fun navigateToRoom(roomId: RoomId, eventId: EventId?, joinedRoom: JoinedRoom?) = lambdaError()
             override fun navigateToCreateRoom() = lambdaError()
             override fun navigateToCreateSpace() = lambdaError()

@@ -168,6 +168,29 @@ class RustMatrixClient(
     override val sessionCoroutineScope = appCoroutineScope.childScope(dispatchers.main, "Session-$sessionId")
     private val sessionDispatcher = dispatchers.io.limitedParallelism(64)
 
+    private val pendingThreadSends = io.element.android.libraries.matrix.impl.threads.PendingThreadSends(
+        File(sessionPaths.fileDirectory, "recent-thread-sends.pending"),
+    )
+    override val recentThreads = io.element.android.libraries.matrix.impl.threads.FileRecentThreads(
+        sessionId,
+        File(sessionPaths.fileDirectory, "recent-threads.properties"),
+        dispatchers.io,
+        pendingThreadSends,
+    )
+    override val threadDirectory = io.element.android.libraries.matrix.impl.threads.ThreadDirectoryCoordinator(
+        io.element.android.libraries.matrix.impl.threads.RustThreadDirectorySource(innerClient, sessionId),
+        sessionCoroutineScope,
+        dispatchers.io,
+    )
+    private val confirmedThreadSends = io.element.android.libraries.matrix.impl.threads.observeConfirmedThreadSends(
+        innerClient,
+        sessionId,
+        recentThreads,
+        pendingThreadSends,
+        sessionCoroutineScope,
+        dispatchers.io,
+    )
+
     private val innerRoomListService = innerSyncService.roomListService()
 
     // TODO refactor this and `innerNotificationClient` to be behind a suspend function instead
@@ -311,6 +334,7 @@ class RustMatrixClient(
         get() = _isShuttingDown.get()
 
     init {
+        sessionCoroutineScope.launch { recentThreads.load() }
         // Make sure the session delegate has a reference to the client to be able to logout on auth error
         sessionDelegate.bindClient(this)
 

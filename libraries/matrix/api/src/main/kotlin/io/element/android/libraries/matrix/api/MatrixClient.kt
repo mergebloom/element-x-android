@@ -78,6 +78,8 @@ interface MatrixClient : ClientUrlContentFetcher {
 
     /** Gives access to the list of rooms the user is a member of, or has been invited to. */
     val roomListService: RoomListService
+    val threadDirectory: io.element.android.libraries.matrix.api.threads.ThreadDirectory
+    val recentThreads: io.element.android.libraries.matrix.api.threads.RecentThreads
 
     /** Gives access to the spaces the user belongs to and their hierarchy. */
     val spaceService: SpaceService

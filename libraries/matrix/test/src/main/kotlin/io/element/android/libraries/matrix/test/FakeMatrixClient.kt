@@ -84,6 +84,10 @@ class FakeMatrixClient(
     override val sessionCoroutineScope: CoroutineScope = TestScope(),
     private val userDisplayName: String? = A_USER_NAME,
     private val userAvatarUrl: String? = AN_AVATAR_URL,
+    override val threadDirectory: io.element.android.libraries.matrix.api.threads.ThreadDirectory =
+        io.element.android.libraries.matrix.test.threads.FakeThreadDirectory(),
+    override val recentThreads: io.element.android.libraries.matrix.api.threads.RecentThreads =
+        io.element.android.libraries.matrix.test.threads.FakeRecentThreads(),
     override val roomListService: RoomListService = FakeRoomListService(),
     override val spaceService: SpaceService = FakeSpaceService(),
     override val matrixMediaLoader: MatrixMediaLoader = FakeMatrixMediaLoader(),

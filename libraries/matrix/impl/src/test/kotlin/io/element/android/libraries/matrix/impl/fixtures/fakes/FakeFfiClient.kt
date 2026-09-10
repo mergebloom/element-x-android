@@ -69,6 +69,7 @@ class FakeFfiClient(
     private val contentScannerResult: () -> ContentScanner = { FakeFfiContentScanner() },
     private val closeResult: () -> Unit = {},
 ) : Client(NoHandle) {
+    override suspend fun subscribeToSendQueueUpdates(listener: org.matrix.rustcomponents.sdk.SendQueueRoomUpdateListener): TaskHandle = FakeFfiTaskHandle()
     override fun userId(): String = userId
     override fun deviceId(): String = deviceId
     override fun homeserver(): String = homeserver

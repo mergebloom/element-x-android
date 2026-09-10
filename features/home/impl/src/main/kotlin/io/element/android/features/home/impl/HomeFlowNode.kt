@@ -221,6 +221,15 @@ class HomeFlowNode(
 
             HomeView(
                 homeState = state,
+                threadsContent = { threadModifier, padding ->
+                    io.element.android.features.home.impl.threads.ThreadsRoute(
+                        client = matrixClient,
+                        onOpen = callback::navigateToThread,
+                        onOpenRoom = { navigateToRoom(it, null) },
+                        modifier = threadModifier,
+                        contentPadding = padding,
+                    )
+                },
                 onRoomClick = ::navigateToRoom,
                 onSettingsClick = callback::navigateToSettings,
                 onStartChatClick = callback::navigateToCreateRoom,

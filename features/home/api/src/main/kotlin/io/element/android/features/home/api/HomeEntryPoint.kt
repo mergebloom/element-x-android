@@ -25,6 +25,7 @@ interface HomeEntryPoint : FeatureEntryPoint {
 
     interface Callback : Plugin {
         fun navigateToRoom(roomId: RoomId, eventId: EventId?, joinedRoom: JoinedRoom?)
+        suspend fun navigateToThread(key: io.element.android.libraries.matrix.api.threads.ThreadKey)
         fun navigateToCreateRoom()
         fun navigateToCreateSpace()
         fun navigateToSettings()

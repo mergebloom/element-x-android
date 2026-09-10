@@ -54,6 +54,7 @@ import io.element.android.libraries.architecture.NodeInputs
 import io.element.android.libraries.architecture.Presenter
 import io.element.android.libraries.architecture.callback
 import io.element.android.libraries.architecture.inputs
+import io.element.android.libraries.core.extensions.runCatchingExceptions
 import io.element.android.libraries.designsystem.utils.OnLifecycleEvent
 import io.element.android.libraries.di.RoomScope
 import io.element.android.libraries.emoji.api.picker.EmojiPickerRenderer
@@ -62,6 +63,7 @@ import io.element.android.libraries.matrix.api.core.EventId
 import io.element.android.libraries.matrix.api.core.RoomId
 import io.element.android.libraries.matrix.api.core.ThreadId
 import io.element.android.libraries.matrix.api.core.UserId
+import io.element.android.libraries.matrix.api.core.asEventId
 import io.element.android.libraries.matrix.api.core.toRoomIdOrAlias
 import io.element.android.libraries.matrix.api.permalink.PermalinkData
 import io.element.android.libraries.matrix.api.permalink.PermalinkParser
@@ -95,6 +97,7 @@ class ThreadedMessagesNode(
     private val appNavigationStateService: AppNavigationStateService,
     private val roomMemberModerationRenderer: RoomMemberModerationRenderer,
     private val emojiPickerRenderer: EmojiPickerRenderer,
+    private val matrixClient: io.element.android.libraries.matrix.api.MatrixClient,
 ) : Node(buildContext, plugins = plugins), MessagesNavigator {
     data class Inputs(
         val threadRootEventId: ThreadId,
@@ -269,6 +272,16 @@ class ThreadedMessagesNode(
         ) {
             // Only display the actual UI and lifecycle logic if the presenter is loaded
             presenter?.present()?.let { state ->
+                LaunchedEffect(inputs.threadRootEventId) {
+                    runCatchingExceptions {
+                        val key = io.element.android.libraries.matrix.api.threads.ThreadKey(
+                            matrixClient.sessionId,
+                            room.roomId,
+                            inputs.threadRootEventId.asEventId(),
+                        )
+                        if (matrixClient.threadDirectory.isAvailable(key)) matrixClient.recentThreads.recordOpened(key)
+                    }
+                }
                 OnLifecycleEvent { _, event ->
                     when (event) {
                         Lifecycle.Event.ON_PAUSE -> state.composerState.eventSink(MessageComposerEvent.SaveDraft)

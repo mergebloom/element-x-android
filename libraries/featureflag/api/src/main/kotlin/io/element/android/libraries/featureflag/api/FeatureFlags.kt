@@ -66,10 +66,9 @@ enum class FeatureFlags(
     Threads(
         key = "feature.thread_timeline",
         title = "Threads",
-        description = "Renders thread messages as a dedicated timeline. Restarting the app is required for this setting to fully take effect.",
-        defaultValue = { false },
-        isFinished = false,
-        isInLabs = true,
+        description = "Renders thread messages as a dedicated timeline.",
+        defaultValue = { true },
+        isFinished = true,
     ),
     MultiAccount(
         key = "feature.multi_account",

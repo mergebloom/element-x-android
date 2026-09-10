@@ -21,7 +21,8 @@ enum class HomeNavigationBarItem(
     ),
     Spaces(
         labelRes = R.string.screen_home_tab_spaces
-    );
+    ),
+    Threads(labelRes = R.string.screen_home_tab_threads);
 
     @Composable
     fun icon(
@@ -29,6 +30,7 @@ enum class HomeNavigationBarItem(
     ) = when (this) {
         Chats -> if (isSelected) CompoundIcons.ChatSolid() else CompoundIcons.Chat()
         Spaces -> if (isSelected) CompoundIcons.SpaceSolid() else CompoundIcons.Space()
+        Threads -> CompoundIcons.Threads()
     }
 
     companion object {
