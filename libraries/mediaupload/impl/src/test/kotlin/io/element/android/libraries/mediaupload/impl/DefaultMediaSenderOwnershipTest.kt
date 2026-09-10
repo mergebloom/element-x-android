@@ -219,7 +219,11 @@ class DefaultMediaSenderOwnershipTest : RobolectricTest() {
             handler.awaitEntered.await()
             handler.result.completeExceptionally(failure)
 
-            assertThat(send.await().exceptionOrNull()).isSameInstanceAs(failure)
+            val observed = send.await().exceptionOrNull()
+            // Coroutine stack-trace recovery may copy the throwable at the deferred boundary.
+            assertThat(observed).isInstanceOf(IllegalStateException::class.java)
+            assertThat(observed?.message).isEqualTo(failure.message)
+            assertThat(generateSequence(observed) { it.cause }.toList()).contains(failure)
             assertThat(handler.cancelCalls).isEqualTo(1)
             assertThat(fixture.sender.hasOngoingMediaUploads).isFalse()
         }
