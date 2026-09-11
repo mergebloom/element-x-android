@@ -1625,6 +1625,18 @@
       "status": "A"
     },
     {
+      "path": "intent/test_app_runtime_driver.py",
+      "requirements": [
+        "EX-004"
+      ],
+      "checks": [
+        "app-runtime-smoke",
+        "evidence-integrity"
+      ],
+      "role": "validation",
+      "status": "A"
+    },
+    {
       "path": "intent/test_integrated_evidence.py",
       "requirements": [
         "EX-004"

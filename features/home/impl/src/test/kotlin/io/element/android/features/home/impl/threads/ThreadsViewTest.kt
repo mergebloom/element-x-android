@@ -14,7 +14,11 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
@@ -222,8 +226,16 @@ class ThreadsViewTest : RobolectricTest() {
             listOf(1f, 2f).forEach { fontScale ->
                 states.forEachIndexed { index, state ->
                     runOnIdle { scenario.value = Triple(dark, fontScale, state) }
-                    onNodeWithText("Unread").assertIsDisplayed()
-                    onNodeWithText("Recent").assertIsDisplayed()
+                    val tabRole = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)
+                    val unread = onNode(hasText("Unread") and tabRole).assertIsDisplayed()
+                    val recent = onNode(hasText("Recent") and tabRole).assertIsDisplayed()
+                    if (state.recentSelected) {
+                        recent.assertIsSelected()
+                        unread.assertIsNotSelected()
+                    } else {
+                        unread.assertIsSelected()
+                        recent.assertIsNotSelected()
+                    }
                     onRoot().captureRoboImage(File(directory, "threads-$index-${if (dark) "dark" else "light"}-$fontScale.png").path)
                 }
             }

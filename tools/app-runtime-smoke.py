@@ -37,10 +37,33 @@ def control(path, data):
 
 
 def nodes():
-    adb('shell', 'uiautomator', 'dump', '/sdcard/candidate-ui.xml')
-    blob = adb('exec-out', 'cat', '/sdcard/candidate-ui.xml')
-    root = ET.fromstring(blob)
-    return list(root.iter('node'))
+    # During launch/onboarding uiautomator can exit without a current window.
+    # Never parse command diagnostics or reuse a previous screen as fresh UI.
+    path = '/sdcard/candidate-ui.xml'
+    for attempt in range(6):
+        reason = 'adb_failure'
+        byte_count = 0
+        try:
+            adb('shell', 'rm', '-f', path)
+            dumped = adb('shell', 'uiautomator', 'dump', path)
+            if b'dumped to: ' + path.encode() not in dumped:
+                reason = 'dump_not_created'
+            else:
+                blob = adb('exec-out', 'cat', path)
+                byte_count = len(blob)
+                reason = 'malformed_xml'
+                root = ET.fromstring(blob)
+                rows = list(root.iter('node'))
+                if root.tag == 'hierarchy' and rows:
+                    return rows
+                reason = 'invalid_hierarchy'
+        except (ET.ParseError, RuntimeError, subprocess.TimeoutExpired):
+            pass
+        # Allowlisted diagnostics only: no XML, arbitrary labels or credentials.
+        RESULT.setdefault('ui_dump_failures', []).append({'attempt': attempt + 1, 'reason': reason, 'bytes': byte_count})
+        if attempt < 5:
+            time.sleep(1)
+    raise RuntimeError('Could not obtain a fresh Android UI hierarchy')
 
 
 def labels(rows):
