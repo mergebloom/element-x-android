@@ -14,6 +14,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
@@ -24,9 +25,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.AndroidComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertWidthIsAtLeast
@@ -48,6 +53,7 @@ import io.element.android.libraries.textcomposer.model.VoiceMessageRecorderEvent
 import io.element.android.libraries.textcomposer.model.VoiceMessageState
 import io.element.android.libraries.textcomposer.model.aTextEditorStateMarkdown
 import io.element.android.libraries.ui.strings.CommonStrings
+import io.element.android.libraries.ui.utils.time.formatShort
 import io.element.android.tests.testutils.robolectric.RobolectricTest
 import io.element.android.wysiwyg.display.TextDisplay
 import kotlinx.collections.immutable.persistentListOf
@@ -156,7 +162,7 @@ class VoiceComposerUiTest : RobolectricTest() {
             up()
         }
         assertEquals(listOf(VoiceMessageRecorderEvent.Start), fixture.events)
-        onNodeWithText(activity!!.getString(R.string.screen_voice_locked)).assertIsDisplayed()
+        assertRecordingWithoutHelper(locked = true)
         onNodeWithText(activity!!.getString(R.string.screen_voice_stop_to_review)).performClick()
         assertEquals(listOf(VoiceMessageRecorderEvent.Start, VoiceMessageRecorderEvent.Stop), fixture.events)
     }
@@ -351,7 +357,7 @@ class VoiceComposerUiTest : RobolectricTest() {
         onNodeWithTag("voice-lock-target").assertIsDisplayed()
         movePointerTo(Offset(origin.x, lock.center.y - 2f))
         onNodeWithTag("voice-microphone").performTouchInput { up() }
-        onNodeWithText(activity!!.getString(R.string.screen_voice_locked)).assertIsDisplayed()
+        assertRecordingWithoutHelper(locked = true)
         assertEquals(listOf(VoiceMessageRecorderEvent.Start), fixture.events)
         assertEquals(0, fixture.sends)
     }
@@ -412,7 +418,7 @@ class VoiceComposerUiTest : RobolectricTest() {
                     capture("near-lock")
                     movePointerTo(origin + Offset(0f, -74f))
                     onNodeWithTag("voice-microphone").performTouchInput { up() }
-                    onNodeWithText(activity!!.getString(R.string.screen_voice_locked)).assertIsDisplayed()
+                    assertRecordingWithoutHelper(locked = true)
                     capture("locked")
                     onNodeWithText(activity!!.getString(R.string.screen_voice_stop_to_review)).performTouchInput { click() }
                     onNodeWithContentDescription(activity!!.getString(CommonStrings.action_send_voice_message)).assertIsDisplayed()
@@ -422,6 +428,64 @@ class VoiceComposerUiTest : RobolectricTest() {
                 }
             }
         }
+    }
+
+    @Test
+    @Config(qualifiers = "w320dp-h640dp-mdpi")
+    fun `hands free hides only redundant copy while keeping accessible stop and explicit preview send`() {
+        val dir = File("build/outputs/voice-screenshots").apply { mkdirs() }
+        listOf(false, true).forEach { dark ->
+            listOf(1f, 2f).forEach { scale ->
+                runAndroidComposeUiTest<ComponentActivity> {
+                    val direction = if (scale == 2f) LayoutDirection.Rtl else LayoutDirection.Ltr
+                    val fixture = Fixture()
+                    composer(fixture, direction = direction, fontScale = scale, dark = dark)
+                    onNodeWithText(activity!!.getString(R.string.screen_voice_idle_hint)).assertIsDisplayed()
+                    onNodeWithTag("voice-microphone").performClick()
+                    assertRecordingWithoutHelper(locked = false)
+                    onNodeWithTag("voice-composer").captureRoboImage(File(dir, "voice-$dark-$scale-$direction-hands-free.png").path)
+                    assertEquals(listOf(VoiceMessageRecorderEvent.Start), fixture.events)
+                    assertEquals(0, fixture.sends)
+                    onNodeWithText(activity!!.getString(R.string.screen_voice_stop_to_review)).performClick()
+                    onNodeWithText(activity!!.getString(R.string.screen_voice_preview_hint)).assertIsDisplayed()
+                    assertEquals(listOf(VoiceMessageRecorderEvent.Start, VoiceMessageRecorderEvent.Stop), fixture.events)
+                    assertEquals(0, fixture.sends)
+                    onNodeWithContentDescription(activity!!.getString(CommonStrings.action_send_voice_message)).performClick()
+                    assertEquals(1, fixture.sends)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `hidden hands free and locked hints leave no layout space`() {
+        listOf(false, true).forEach { locked ->
+            runAndroidComposeUiTest<ComponentActivity> {
+                setContent {
+                    ElementTheme {
+                        Box(Modifier.width(320.dp).testTag("hint-slot")) {
+                            VoiceRecordingHint(recording(), VoiceGestureState().apply { this.locked = locked }, editing = false)
+                        }
+                    }
+                }
+                onNodeWithTag("hint-slot").assertHeightIsEqualTo(0.dp)
+            }
+        }
+    }
+
+    private fun AndroidComposeUiTest<ComponentActivity>.assertRecordingWithoutHelper(locked: Boolean) {
+        onNodeWithText(activity!!.getString(R.string.screen_voice_hands_free)).assertDoesNotExist()
+        onNodeWithText(activity!!.getString(R.string.screen_voice_locked)).assertDoesNotExist()
+        val status = activity!!.getString(if (locked) R.string.screen_voice_locked else R.string.screen_voice_hands_free)
+        onNodeWithTag("voice-microphone")
+            .assertIsDisplayed()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, status))
+        onNodeWithContentDescription(activity!!.getString(CommonStrings.a11y_voice_message_stop_recording)).assertIsDisplayed()
+        onNodeWithText(activity!!.getString(CommonStrings.action_cancel)).assertIsDisplayed().assertHeightIsAtLeast(48.dp)
+        onNodeWithText(activity!!.getString(R.string.screen_voice_stop_to_review)).assertIsDisplayed().assertHeightIsAtLeast(48.dp)
+        onNodeWithText(3.seconds.formatShort()).assertIsDisplayed()
+        onNodeWithContentDescription(activity!!.getString(CommonStrings.action_send_voice_message)).assertDoesNotExist()
+        onNodeWithContentDescription(activity!!.getString(CommonStrings.action_send_message)).assertDoesNotExist()
     }
 
     private fun AndroidComposeUiTest<ComponentActivity>.hold(position: Offset? = null): Offset {
